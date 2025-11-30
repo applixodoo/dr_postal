@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Ported from Odoo v18 mail module
+# Ported from Odoo v18 mail module, adapted for v19
 
 from odoo import api, fields, models, _, Command
 from odoo.exceptions import UserError
@@ -127,26 +127,69 @@ class PartnerResend(models.TransientModel):
         return action
 
     def action_resend(self):
-        message = self.resend_wizard_id.mail_message_id
-        if len(message) != 1:
-            raise UserError(_('All partners must belong to the same message'))
-
-        recipients_data = self.env['mail.followers']._get_recipient_data(None, 'comment', False, pids=self.partner_id.ids)
-        email_partners_data = [
-            pdata
-            for pid, pdata in recipients_data[0].items()
-            if pid and pdata.get('notif', 'email') == 'email'
-        ]
-
-        record = self.env[message.model].browse(message.res_id) if message._is_thread_message() else self.env['mail.thread']
-        record._notify_thread_by_email(
-            message, email_partners_data,
-            resend_existing=True,
-            send_after_commit=False
-        )
-
-        message._notify_message_notification_update()
-
+        """Resend the email by creating a new mail.mail and sending it."""
+        for partner_resend in self:
+            notification = partner_resend.notification_id
+            message = partner_resend.resend_wizard_id.mail_message_id
+            partner = partner_resend.partner_id
+            
+            if not message or not partner:
+                continue
+            
+            # Reset notification status to ready
+            notification.sudo().write({
+                'notification_status': 'ready',
+                'failure_type': False,
+                'failure_reason': False,
+            })
+            
+            # Get the record if it's a thread message
+            if message.model and message.res_id:
+                try:
+                    record = self.env[message.model].browse(message.res_id)
+                    if not record.exists():
+                        record = self.env['mail.thread']
+                except Exception:
+                    record = self.env['mail.thread']
+            else:
+                record = self.env['mail.thread']
+            
+            # Create mail.mail for this partner
+            email_from = message.email_from or self.env.company.email_formatted
+            
+            mail_values = {
+                'mail_message_id': message.id,
+                'email_from': email_from,
+                'email_to': partner.email,
+                'recipient_ids': [(6, 0, [partner.id])],
+                'subject': message.subject or '',
+                'body_html': message.body,
+                'auto_delete': True,
+                'notification': True,
+            }
+            
+            mail = self.env['mail.mail'].sudo().create(mail_values)
+            
+            # Send the mail
+            try:
+                mail.send(raise_exception=False)
+                # Update notification status based on mail state
+                if mail.state == 'sent':
+                    notification.sudo().write({'notification_status': 'sent'})
+                elif mail.state == 'exception':
+                    notification.sudo().write({
+                        'notification_status': 'exception',
+                        'failure_type': mail.failure_type,
+                        'failure_reason': mail.failure_reason,
+                    })
+            except Exception as e:
+                notification.sudo().write({
+                    'notification_status': 'exception',
+                    'failure_reason': str(e),
+                })
+            
+            # Notify about the update
+            message._notify_message_notification_update()
+        
         if len(self) == 1:
             return self.action_open_record()
-
