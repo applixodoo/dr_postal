@@ -10,21 +10,27 @@
                     <block title="Webhook Configuration" name="postal_webhook_config">
                         <setting 
                             string="Webhook Token"
-                            help="Secret token to authenticate incoming webhooks from Postal server">
+                            help="Secret token for your webhook URL. Generate a random string and paste it here.">
                             <div class="content-group">
                                 <div class="row mt16">
                                     <label for="dr_postal_webhook_token" class="col-lg-3 o_light_label"/>
-                                    <field name="dr_postal_webhook_token" class="oe_inline" password="True"/>
+                                    <field name="dr_postal_webhook_token" class="oe_inline" placeholder="e.g. my-secret-token-12345"/>
+                                </div>
+                                <div class="text-muted mt8">
+                                    Tip: Generate a token with: <code>openssl rand -hex 32</code>
                                 </div>
                             </div>
                         </setting>
                         <setting 
                             string="Webhook URL"
-                            help="Configure this URL in your Postal server webhook settings">
+                            help="Copy this URL to your Postal server webhook settings.">
                             <div class="content-group">
                                 <div class="row mt16">
                                     <label for="dr_postal_webhook_url" class="col-lg-3 o_light_label"/>
                                     <field name="dr_postal_webhook_url" class="oe_inline" readonly="1" widget="CopyClipboardChar"/>
+                                </div>
+                                <div class="text-muted mt8">
+                                    The token is included in the URL. No header configuration needed in Postal.
                                 </div>
                             </div>
                         </setting>

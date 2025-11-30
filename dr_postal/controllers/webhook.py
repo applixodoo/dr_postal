@@ -6,6 +6,7 @@ from datetime import datetime
 
 from odoo import http, SUPERUSER_ID
 from odoo.http import request
+from odoo.exceptions import AccessDenied
 
 _logger = logging.getLogger(__name__)
 
@@ -13,10 +14,17 @@ _logger = logging.getLogger(__name__)
 class PostalWebhookController(http.Controller):
     """Handle incoming webhooks from Postal mail server."""
 
-    @http.route('/postal/webhook', type='jsonrpc', auth='none', methods=['POST'], csrf=False)
-    def postal_webhook(self, **kwargs):
+    @http.route([
+        '/postal/webhook',
+        '/postal/webhook/<string:token>',
+    ], type='http', auth='none', methods=['POST'], csrf=False)
+    def postal_webhook(self, token=None, **kwargs):
         """
         Receive and process postal webhook events.
+        
+        URL formats:
+        - /postal/webhook/<token>  (recommended, token in URL)
+        - /postal/webhook          (token optional, checks X-Postal-Token header)
         
         Expected payload format:
         {
@@ -32,32 +40,40 @@ class PostalWebhookController(http.Controller):
             "error": "Mailbox full"  // only for bounced
         }
         """
-        # Get JSON data
+        # Get JSON data from request body
         try:
-            data = request.get_json_data()
+            data = json.loads(request.httprequest.data.decode('utf-8'))
         except Exception as e:
             _logger.error('Postal webhook: Failed to parse JSON: %s', e)
-            return {'status': 'error', 'message': 'Invalid JSON'}
+            return self._json_response({'status': 'error', 'message': 'Invalid JSON'}, 400)
         
         if not data:
             _logger.warning('Postal webhook: Empty payload received')
-            return {'status': 'error', 'message': 'Empty payload'}
+            return self._json_response({'status': 'error', 'message': 'Empty payload'}, 400)
         
         # Validate webhook token
-        if not self._validate_webhook_token():
+        if not self._validate_webhook_token(token):
             _logger.warning('Postal webhook: Invalid or missing token')
-            return {'status': 'error', 'message': 'Unauthorized'}
+            return self._json_response({'status': 'error', 'message': 'Unauthorized'}, 403)
         
         # Process the event
         try:
             result = self._process_postal_event(data)
-            return result
+            return self._json_response(result)
         except Exception as e:
             _logger.exception('Postal webhook: Error processing event: %s', e)
-            return {'status': 'error', 'message': str(e)}
+            return self._json_response({'status': 'error', 'message': str(e)}, 500)
 
-    def _validate_webhook_token(self):
-        """Validate the X-Postal-Token header against configured token."""
+    def _json_response(self, data, status=200):
+        """Return a JSON response."""
+        return request.make_response(
+            json.dumps(data),
+            headers=[('Content-Type', 'application/json')],
+            status=status
+        )
+
+    def _validate_webhook_token(self, url_token=None):
+        """Validate the token from URL or X-Postal-Token header."""
         # Get configured token
         env = request.env(user=SUPERUSER_ID)
         configured_token = env['ir.config_parameter'].sudo().get_param(
@@ -69,10 +85,16 @@ class PostalWebhookController(http.Controller):
             _logger.warning('Postal webhook: No token configured, allowing request')
             return True
         
-        # Check header
-        received_token = request.httprequest.headers.get('X-Postal-Token', '')
+        # Check URL token first (preferred method)
+        if url_token and url_token == configured_token:
+            return True
         
-        return received_token == configured_token
+        # Fallback: check header
+        header_token = request.httprequest.headers.get('X-Postal-Token', '')
+        if header_token and header_token == configured_token:
+            return True
+        
+        return False
 
     def _process_postal_event(self, data):
         """Process a postal webhook event."""
@@ -90,6 +112,11 @@ class PostalWebhookController(http.Controller):
             'bounce': 'bounced',  # Alternative naming
             'open': 'opened',      # Alternative naming
             'delivery': 'delivered',  # Alternative naming
+            # Postal specific event names
+            'MessageSent': 'sent',
+            'MessageDelivered': 'delivered',
+            'MessageOpened': 'opened',
+            'MessageBounced': 'bounced',
         }
         
         mapped_event = event_mapping.get(event_type)
@@ -190,4 +217,3 @@ class PostalWebhookController(http.Controller):
         except (ValueError, TypeError):
             _logger.warning('Postal webhook: Failed to parse timestamp: %s', timestamp_str)
             return datetime.now()
-

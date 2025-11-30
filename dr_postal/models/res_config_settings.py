@@ -12,7 +12,7 @@ class ResConfigSettings(models.TransientModel):
         string='Postal Webhook Token',
         config_parameter='dr_postal.webhook_token',
         help='Secret token used to authenticate incoming postal webhooks. '
-             'Configure the same token in your Postal server.',
+             'This token will be part of your webhook URL.',
     )
     dr_postal_webhook_url = fields.Char(
         string='Webhook URL',
@@ -23,6 +23,9 @@ class ResConfigSettings(models.TransientModel):
     @api.depends('dr_postal_webhook_token')
     def _compute_webhook_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        token = self.env['ir.config_parameter'].sudo().get_param('dr_postal.webhook_token', '')
         for record in self:
-            record.dr_postal_webhook_url = f"{base_url}/postal/webhook"
-
+            if token:
+                record.dr_postal_webhook_url = f"{base_url}/postal/webhook/{token}"
+            else:
+                record.dr_postal_webhook_url = f"{base_url}/postal/webhook/YOUR-TOKEN-HERE"
