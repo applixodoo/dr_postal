@@ -81,7 +81,11 @@ class MailResendMessage(models.TransientModel):
                 to_send.action_resend()
             else:
                 wizard.mail_message_id._notify_message_notification_update()
-        return {'type': 'ir.actions.act_window_close'}
+        # Reload the page to refresh notification icons
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
 
     def cancel_mail_action(self):
         for wizard in self:
