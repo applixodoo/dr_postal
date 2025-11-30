@@ -2,89 +2,71 @@
  * Postal Mail Tracking - WhatsApp-style Status Indicators
  * ========================================================
  * 
- * These classes replace the FontAwesome icons with text-based ticks:
- * - ✓ (grey) = Sent
- * - ✓✓ (grey) = Delivered
+ * These classes show tick marks like WhatsApp:
+ * - ✓ (grey) = Sent to mail server
+ * - ✓✓ (grey) = SMTP confirmed / Delivered
  * - ✓✓ (blue) = Opened/Read
- * - ✕ (red) = Bounced
  */
 
-/* Base status indicator - replaces fa icons */
+/* Base status indicator */
 .o_dr_postal_status {
+    display: inline-flex !important;
+    align-items: center;
     font-family: system-ui, -apple-system, sans-serif;
     font-style: normal;
-    font-weight: 600;
-    font-size: 12px;
-    min-width: 16px;
-    text-align: center;
+    font-weight: normal;
+    font-size: 11px;
+    line-height: 1;
+    vertical-align: middle;
 }
 
 /* Remove any inherited FontAwesome styles */
 .o_dr_postal_status::before {
     content: none !important;
+    display: none !important;
 }
 
 /* Sent: Single grey tick ✓ */
-.o_dr_postal_sent {
-    color: #8696a0 !important;
-}
-
 .o_dr_postal_sent::after {
     content: '✓';
+    color: #8696a0;
 }
 
-/* Delivered: Double grey ticks ✓✓ */
-.o_dr_postal_delivered {
-    color: #8696a0 !important;
-    letter-spacing: -2px;
-}
-
+/* Delivered: Double grey ticks ✓✓ (side by side) */
 .o_dr_postal_delivered::after {
     content: '✓✓';
+    color: #8696a0;
+    letter-spacing: -3px;
+    margin-right: -2px;
 }
 
 /* Opened/Read: Double blue ticks ✓✓ */
-.o_dr_postal_opened {
-    color: #53bdeb !important;
-    letter-spacing: -2px;
-}
-
 .o_dr_postal_opened::after {
     content: '✓✓';
+    color: #53bdeb;
+    letter-spacing: -3px;
+    margin-right: -2px;
 }
 
-/* Bounced: Red cross ✕ */
-.o_dr_postal_bounced {
-    color: #dc3545 !important;
-}
-
-.o_dr_postal_bounced::after {
-    content: '✕';
-}
-
-/* Make sure the icon container displays correctly */
-.o-mail-MessageNotificationPopover .o_dr_postal_status,
-.o-mail-Message .o_dr_postal_status {
-    display: inline-block;
+/* Ensure proper display in message notifications */
+.o-mail-Message-notification .o_dr_postal_status,
+.o-mail-MessageNotificationPopover .o_dr_postal_status {
+    display: inline-flex !important;
+    white-space: nowrap;
 }
 
 /* Dark mode support */
-html.dark .o_dr_postal_sent,
-.o_dark .o_dr_postal_sent {
-    color: #8696a0 !important;
+html.dark .o_dr_postal_sent::after,
+.o_dark .o_dr_postal_sent::after {
+    color: #8696a0;
 }
 
-html.dark .o_dr_postal_delivered,
-.o_dark .o_dr_postal_delivered {
-    color: #8696a0 !important;
+html.dark .o_dr_postal_delivered::after,
+.o_dark .o_dr_postal_delivered::after {
+    color: #8696a0;
 }
 
-html.dark .o_dr_postal_opened,
-.o_dark .o_dr_postal_opened {
-    color: #53bdeb !important;
-}
-
-html.dark .o_dr_postal_bounced,
-.o_dark .o_dr_postal_bounced {
-    color: #ff6b6b !important;
+html.dark .o_dr_postal_opened::after,
+.o_dark .o_dr_postal_opened::after {
+    color: #53bdeb;
 }
