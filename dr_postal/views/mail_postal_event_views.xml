@@ -7,10 +7,7 @@
         <field name="arch" type="xml">
             <list string="Postal Events" default_order="event_datetime desc">
                 <field name="event_datetime"/>
-                <field name="event_type" 
-                    decoration-success="event_type in ('delivered', 'opened')"
-                    decoration-danger="event_type == 'bounced'"
-                    decoration-muted="event_type == 'sent'"/>
+                <field name="event_type"/>
                 <field name="recipient"/>
                 <field name="external_message_id"/>
                 <field name="message_id" optional="show"/>
@@ -64,18 +61,11 @@
             <search string="Search Postal Events">
                 <field name="recipient"/>
                 <field name="external_message_id"/>
-                <field name="postal_tracking_uuid"/>
-                <separator/>
+                <field name="event_type"/>
                 <filter string="Sent" name="sent" domain="[('event_type', '=', 'sent')]"/>
                 <filter string="Delivered" name="delivered" domain="[('event_type', '=', 'delivered')]"/>
                 <filter string="Opened" name="opened" domain="[('event_type', '=', 'opened')]"/>
                 <filter string="Bounced" name="bounced" domain="[('event_type', '=', 'bounced')]"/>
-                <separator/>
-                <group expand="0" string="Group By">
-                    <filter string="Event Type" name="group_event_type" context="{'group_by': 'event_type'}"/>
-                    <filter string="Date" name="group_date" context="{'group_by': 'event_datetime:day'}"/>
-                    <filter string="Recipient" name="group_recipient" context="{'group_by': 'recipient'}"/>
-                </group>
             </search>
         </field>
     </record>
