@@ -100,12 +100,19 @@ class PostalWebhookController(http.Controller):
         env = request.env(user=SUPERUSER_ID)
         
         # Extract event status from Postal's format
-        # Postal uses "status" field with values like: Sent, SoftFail, HardFail, Held, Bounced
-        event_status = data.get('status', '').lower()
+        # Postal sends both "status" and "event" fields
+        # "event" contains: MessageSent, MessageDelivered, MessageBounced, etc.
+        # "status" contains: Sent, SoftFail, HardFail, Held, Bounced, etc.
         
-        # Also check for "event" field for compatibility
+        # Try "event" field first (more specific)
+        event_status = data.get('event', '').lower().replace('_', '')
+        
+        # Fallback to "status" field
         if not event_status:
-            event_status = data.get('event', '').lower()
+            event_status = data.get('status', '').lower()
+        
+        _logger.info('Postal webhook: Received event=%s, status=%s', 
+                     data.get('event'), data.get('status'))
         
         # Map postal status to our states
         status_mapping = {
@@ -125,6 +132,15 @@ class PostalWebhookController(http.Controller):
             # Legacy/alternative names
             'delivery': 'delivered',
             'bounce': 'bounced',
+            # Postal event types (concatenated lowercase versions)
+            'messagesent': 'sent',
+            'messagedelivered': 'delivered',
+            'messageopened': 'opened',
+            'messagebounced': 'bounced',
+            'messagedelayed': 'sent',
+            'messageheldforsend': 'sent',
+            'messagelinkclicked': 'opened',
+            'messageloaded': 'opened',  # Image load = opened
         }
         
         mapped_event = status_mapping.get(event_status)
