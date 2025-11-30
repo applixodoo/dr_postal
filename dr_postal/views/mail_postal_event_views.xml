@@ -86,11 +86,11 @@
         </field>
     </record>
 
-    <!-- Menu (under Technical > Email) -->
+    <!-- Menu under Settings > Technical > Email -->
     <menuitem 
         id="mail_postal_event_menu"
         name="Postal Events"
-        parent="mail.menu_mail_push"
+        parent="base.menu_email"
         action="mail_postal_event_action"
         groups="base.group_system"
         sequence="100"/>
