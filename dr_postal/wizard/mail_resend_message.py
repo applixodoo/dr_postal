@@ -136,12 +136,16 @@ class PartnerResend(models.TransientModel):
             if not message or not partner:
                 continue
             
-            # Reset notification status to ready
-            notification.sudo().write({
+            # Reset notification status to ready and clear postal tracking state
+            update_vals = {
                 'notification_status': 'ready',
                 'failure_type': False,
                 'failure_reason': False,
-            })
+            }
+            # Reset postal_state if the field exists (from dr_postal module)
+            if 'postal_state' in self.env['mail.notification']._fields:
+                update_vals['postal_state'] = False
+            notification.sudo().write(update_vals)
             
             # Get the record if it's a thread message
             if message.model and message.res_id:
@@ -175,13 +179,17 @@ class PartnerResend(models.TransientModel):
                 mail.send(raise_exception=False)
                 # Update notification status based on mail state
                 if mail.state == 'sent':
-                    notification.sudo().write({'notification_status': 'sent'})
+                    sent_vals = {'notification_status': 'sent'}
+                    if 'postal_state' in self.env['mail.notification']._fields:
+                        sent_vals['postal_state'] = 'sent'
+                    notification.sudo().write(sent_vals)
                 elif mail.state == 'exception':
-                    notification.sudo().write({
+                    exception_vals = {
                         'notification_status': 'exception',
                         'failure_type': mail.failure_type,
                         'failure_reason': mail.failure_reason,
-                    })
+                    }
+                    notification.sudo().write(exception_vals)
             except Exception as e:
                 notification.sudo().write({
                     'notification_status': 'exception',
