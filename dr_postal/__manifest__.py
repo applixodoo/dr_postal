@@ -16,7 +16,7 @@ This module integrates Odoo with Postal mail server webhooks to provide:
     - ✓✓ (grey) = Delivered  
     - ✓✓ (blue) = Read/Opened
     - ✕ (red) = Bounced
-* **Automatic bounce notifications**: Posts to chatter when emails bounce
+* **Resend failed emails**: Dialog to retry or ignore bounced emails
 * **Event audit log**: Full history of postal events for debugging
 
 Configuration
@@ -33,6 +33,7 @@ Configuration
     ],
     'data': [
         'security/ir.model.access.csv',
+        'wizard/mail_resend_message_views.xml',
         'views/res_config_settings_views.xml',
         'views/mail_postal_event_views.xml',
     ],
@@ -46,4 +47,3 @@ Configuration
     'application': True,
     'auto_install': False,
 }
-

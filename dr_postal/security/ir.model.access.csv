@@ -1,4 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_mail_postal_event_admin,mail.postal.event admin,model_mail_postal_event,base.group_system,1,1,1,1
 access_mail_postal_event_user,mail.postal.event user,model_mail_postal_event,base.group_user,1,0,0,0
-
+access_mail_resend_message,mail.resend.message user,model_mail_resend_message,base.group_user,1,1,1,1
+access_mail_resend_partner,mail.resend.partner user,model_mail_resend_partner,base.group_user,1,1,1,1
