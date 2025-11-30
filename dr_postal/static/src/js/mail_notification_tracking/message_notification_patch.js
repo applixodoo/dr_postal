@@ -1,19 +1,30 @@
 /** @odoo-module **/
 
+/**
+ * Message component patches for postal status display.
+ * 
+ * The postal_state data is added via Python _to_store method.
+ * This file provides helper methods if the Message component exists.
+ */
+
 import { patch } from "@web/core/utils/patch";
 
-// Patch message-related components to show postal status
-// This is a safe patch that won't break if components don't exist
-
+// Safely try to patch Message component
+let Message;
 try {
-    const { Message } = require("@mail/core/common/message");
-    
+    Message = odoo.loader.modules.get("@mail/core/common/message")?.Message;
+} catch (e) {
+    // Module not found
+}
+
+if (Message) {
     patch(Message.prototype, {
         /**
          * Get the aggregated postal state for this message's notifications
          */
         get postalState() {
-            if (!this.props.message || !this.props.message.notifications) {
+            const message = this.props?.message;
+            if (!message?.notifications?.length) {
                 return "none";
             }
             
@@ -22,7 +33,7 @@ try {
             let highestState = "none";
             let highestOrder = 0;
             
-            for (const notification of this.props.message.notifications) {
+            for (const notification of message.notifications) {
                 const state = notification.postal_state || "none";
                 const order = stateOrder[state] || 0;
                 if (order > highestOrder) {
@@ -67,6 +78,4 @@ try {
             return titles[this.postalState] || "";
         },
     });
-} catch (e) {
-    console.log("dr_postal: Could not patch Message component", e);
 }
