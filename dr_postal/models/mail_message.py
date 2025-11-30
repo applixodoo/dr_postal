@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from odoo import api, models
+from odoo import models
 
 
 class MailMessage(models.Model):
-    """Extend mail.message to include postal tracking data in frontend."""
+    """Extend mail.message for postal tracking compatibility."""
     
     _inherit = 'mail.message'
-
-    # Remove _to_store override for now - it's causing recursion issues
-    # The postal_state field exists on mail.notification and can be read directly
-    # UI will need to fetch this data separately or we'll find another approach
+    
+    # No overrides needed - postal_state is handled via mail.notification._to_store_defaults

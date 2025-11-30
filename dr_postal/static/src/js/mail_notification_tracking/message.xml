@@ -1,15 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-
-    <!-- 
-    Postal status indicator template.
-    This can be included in message templates or used standalone.
-    -->
-    <t t-name="dr_postal.PostalStatusIndicator">
-        <span t-if="hasPostalTracking"
-              t-attf-class="o_dr_postal_status {{ postalStatusClass }}"
-              t-att-title="postalStatusTitle">
-        </span>
-    </t>
-
+    <!-- No template overrides needed - status is handled via CSS classes -->
 </templates>

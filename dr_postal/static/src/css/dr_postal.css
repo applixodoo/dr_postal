@@ -1,24 +1,32 @@
 /* 
  * Postal Mail Tracking - WhatsApp-style Status Indicators
  * ========================================================
+ * 
+ * These classes replace the FontAwesome icons with text-based ticks:
+ * - ✓ (grey) = Sent
+ * - ✓✓ (grey) = Delivered
+ * - ✓✓ (blue) = Opened/Read
+ * - ✕ (red) = Bounced
  */
 
-/* Base status indicator */
+/* Base status indicator - replaces fa icons */
 .o_dr_postal_status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 4px;
-    font-size: 11px;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-style: normal;
     font-weight: 600;
+    font-size: 12px;
     min-width: 16px;
-    vertical-align: middle;
-    cursor: default;
+    text-align: center;
+}
+
+/* Remove any inherited FontAwesome styles */
+.o_dr_postal_status::before {
+    content: none !important;
 }
 
 /* Sent: Single grey tick ✓ */
 .o_dr_postal_sent {
-    color: #8696a0;
+    color: #8696a0 !important;
 }
 
 .o_dr_postal_sent::after {
@@ -27,7 +35,7 @@
 
 /* Delivered: Double grey ticks ✓✓ */
 .o_dr_postal_delivered {
-    color: #8696a0;
+    color: #8696a0 !important;
     letter-spacing: -2px;
 }
 
@@ -37,7 +45,7 @@
 
 /* Opened/Read: Double blue ticks ✓✓ */
 .o_dr_postal_opened {
-    color: #53bdeb;
+    color: #53bdeb !important;
     letter-spacing: -2px;
 }
 
@@ -47,47 +55,36 @@
 
 /* Bounced: Red cross ✕ */
 .o_dr_postal_bounced {
-    color: #dc3545;
+    color: #dc3545 !important;
 }
 
 .o_dr_postal_bounced::after {
     content: '✕';
 }
 
-/* Animation for status changes */
-.o_dr_postal_status {
-    transition: color 0.2s ease;
-}
-
-/* Chatter message list */
+/* Make sure the icon container displays correctly */
+.o-mail-MessageNotificationPopover .o_dr_postal_status,
 .o-mail-Message .o_dr_postal_status {
-    font-size: 10px;
-}
-
-/* Notification popover */
-.o-mail-NotificationPopover .o_dr_postal_status,
-.o-mail-MessageNotificationPopover .o_dr_postal_status {
-    font-size: 10px;
-    margin-left: 6px;
+    display: inline-block;
 }
 
 /* Dark mode support */
 html.dark .o_dr_postal_sent,
 .o_dark .o_dr_postal_sent {
-    color: #8696a0;
+    color: #8696a0 !important;
 }
 
 html.dark .o_dr_postal_delivered,
 .o_dark .o_dr_postal_delivered {
-    color: #8696a0;
+    color: #8696a0 !important;
 }
 
 html.dark .o_dr_postal_opened,
 .o_dark .o_dr_postal_opened {
-    color: #53bdeb;
+    color: #53bdeb !important;
 }
 
 html.dark .o_dr_postal_bounced,
 .o_dark .o_dr_postal_bounced {
-    color: #ff6b6b;
+    color: #ff6b6b !important;
 }

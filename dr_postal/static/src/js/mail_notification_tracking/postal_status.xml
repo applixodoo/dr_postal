@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-
-    <t t-name="dr_postal.PostalStatus">
-        <span t-if="shouldShow"
-              t-attf-class="o_dr_postal_status {{ statusClass }}"
-              t-att-title="statusTitle">
-        </span>
-    </t>
-
+    <!-- No separate component needed - status displayed via Notification.statusIcon -->
 </templates>

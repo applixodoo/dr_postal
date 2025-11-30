@@ -32,6 +32,13 @@ class MailNotification(models.Model):
         help='Whether a bounce notification has been posted to chatter',
     )
 
+    def _to_store_defaults(self, target):
+        """Add postal_state to the data sent to frontend."""
+        defaults = super()._to_store_defaults(target)
+        # Add postal_state to the list of fields
+        defaults.append("postal_state")
+        return defaults
+
     def _generate_tracking_uuid(self):
         """Generate a new tracking UUID for this notification."""
         return str(uuid.uuid4())
