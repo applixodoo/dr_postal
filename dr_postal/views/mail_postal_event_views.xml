@@ -49,7 +49,7 @@
                         <field name="error_message" nolabel="1"/>
                     </group>
                     <group string="Raw Payload">
-                        <field name="payload_json" nolabel="1" widget="ace" options="{'mode': 'json'}"/>
+                        <field name="payload_json" nolabel="1"/>
                     </group>
                 </sheet>
             </form>
@@ -65,13 +65,12 @@
                 <field name="recipient"/>
                 <field name="external_message_id"/>
                 <field name="postal_tracking_uuid"/>
+                <separator/>
                 <filter string="Sent" name="sent" domain="[('event_type', '=', 'sent')]"/>
                 <filter string="Delivered" name="delivered" domain="[('event_type', '=', 'delivered')]"/>
                 <filter string="Opened" name="opened" domain="[('event_type', '=', 'opened')]"/>
                 <filter string="Bounced" name="bounced" domain="[('event_type', '=', 'bounced')]"/>
                 <separator/>
-                <filter string="Today" name="today" domain="[('event_datetime', '>=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter string="This Week" name="week" domain="[('event_datetime', '>=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
                 <group expand="0" string="Group By">
                     <filter string="Event Type" name="group_event_type" context="{'group_by': 'event_type'}"/>
                     <filter string="Date" name="group_date" context="{'group_by': 'event_datetime:day'}"/>
@@ -87,7 +86,6 @@
         <field name="res_model">mail.postal.event</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="mail_postal_event_view_search"/>
-        <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No postal events yet
@@ -107,4 +105,3 @@
         groups="base.group_system"
         sequence="100"/>
 </odoo>
-
