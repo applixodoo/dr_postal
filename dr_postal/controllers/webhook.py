@@ -6,7 +6,6 @@ from datetime import datetime
 
 from odoo import http, SUPERUSER_ID
 from odoo.http import request
-from odoo.exceptions import AccessDenied
 
 _logger = logging.getLogger(__name__)
 
@@ -22,22 +21,22 @@ class PostalWebhookController(http.Controller):
         """
         Receive and process postal webhook events.
         
-        URL formats:
-        - /postal/webhook/<token>  (recommended, token in URL)
-        - /postal/webhook          (token optional, checks X-Postal-Token header)
-        
-        Expected payload format:
+        Postal payload format:
         {
-            "event": "bounced|delivered|opened|sent",
-            "message_id": "abc123@example.com",
-            "timestamp": "2025-01-01T12:00:00Z",
-            "recipient": "john@example.com",
-            "metadata": {
-                "odoo_notification_id": 991,
-                "odoo_message_id": 745,
-                "odoo_tracking_uuid": "uuid-string"
+            "message": {
+                "id": 7465,
+                "token": "AP3dANR0LKoe8Gq5",
+                "direction": "outgoing",
+                "message_id": "961778370469068...@eupq08",
+                "to": "recipient@example.com",
+                "from": "sender@example.com",
+                "subject": "Email Subject",
+                "timestamp": 1764514825.368213
             },
-            "error": "Mailbox full"  // only for bounced
+            "status": "Sent",  // Sent, SoftFail, HardFail, Held, Bounced, etc.
+            "details": "Message accepted by ...",
+            "output": "250 2.0.0 OK ...",
+            "timestamp": 1764514826.4674146
         }
         """
         # Get JSON data from request body
@@ -100,49 +99,71 @@ class PostalWebhookController(http.Controller):
         """Process a postal webhook event."""
         env = request.env(user=SUPERUSER_ID)
         
-        # Extract event data
-        event_type = data.get('event', '').lower()
+        # Extract event status from Postal's format
+        # Postal uses "status" field with values like: Sent, SoftFail, HardFail, Held, Bounced
+        event_status = data.get('status', '').lower()
         
-        # Map postal event types to our states
-        event_mapping = {
+        # Also check for "event" field for compatibility
+        if not event_status:
+            event_status = data.get('event', '').lower()
+        
+        # Map postal status to our states
+        status_mapping = {
+            # Postal status values
             'sent': 'sent',
-            'delivered': 'delivered',
-            'opened': 'opened',
+            'softfail': 'bounced',
+            'hardfail': 'bounced',
             'bounced': 'bounced',
-            'bounce': 'bounced',  # Alternative naming
-            'open': 'opened',      # Alternative naming
-            'delivery': 'delivered',  # Alternative naming
-            # Postal specific event names
-            'MessageSent': 'sent',
-            'MessageDelivered': 'delivered',
-            'MessageOpened': 'opened',
-            'MessageBounced': 'bounced',
+            'held': 'sent',  # Treat held as sent for now
+            'delivered': 'delivered',
+            # Open tracking events
+            'opened': 'opened',
+            'open': 'opened',
+            # Click events (treat as opened)
+            'clicked': 'opened',
+            'click': 'opened',
+            # Legacy/alternative names
+            'delivery': 'delivered',
+            'bounce': 'bounced',
         }
         
-        mapped_event = event_mapping.get(event_type)
+        mapped_event = status_mapping.get(event_status)
         if not mapped_event:
-            _logger.warning('Postal webhook: Unknown event type: %s', event_type)
-            return {'status': 'ok', 'message': 'Unknown event type, ignored'}
+            _logger.warning('Postal webhook: Unknown status type: %s', event_status)
+            return {'status': 'ok', 'message': f'Unknown event type: {event_status}, ignored'}
         
-        # Extract identifiers
-        external_message_id = data.get('message_id', '')
-        recipient = data.get('recipient', '')
-        timestamp = data.get('timestamp', '')
-        error_message = data.get('error', '')
-        metadata = data.get('metadata', {}) or {}
+        # Extract message info from Postal's nested structure
+        message_data = data.get('message', {})
         
-        # Parse timestamp
-        event_datetime = self._parse_timestamp(timestamp)
+        # Get identifiers
+        external_message_id = message_data.get('message_id', '')
+        recipient = message_data.get('to', '')
         
-        # Find notification
-        notification = self._find_notification(metadata, external_message_id)
+        # Get timestamp - Postal uses Unix timestamp
+        timestamp = data.get('timestamp', 0)
+        if timestamp:
+            try:
+                event_datetime = datetime.fromtimestamp(float(timestamp))
+            except (ValueError, TypeError, OSError):
+                event_datetime = datetime.now()
+        else:
+            event_datetime = datetime.now()
+        
+        # Build error message for failures
+        error_message = ''
+        if mapped_event == 'bounced':
+            error_message = data.get('details', '')
+            if data.get('output'):
+                error_message += f"\n\nServer response: {data.get('output', '')}"
+        
+        # Find notification by message_id
+        notification = self._find_notification(message_data, external_message_id)
         
         if not notification:
             _logger.info(
-                'Postal webhook: No matching notification found for event %s (message_id: %s)',
-                mapped_event, external_message_id
+                'Postal webhook: No matching notification found for event %s (message_id: %s, to: %s)',
+                mapped_event, external_message_id, recipient
             )
-            # Still create event for audit even without notification match
         
         # Create postal event record
         event_vals = {
@@ -152,12 +173,14 @@ class PostalWebhookController(http.Controller):
             'external_message_id': external_message_id,
             'recipient': recipient,
             'error_message': error_message,
-            'postal_tracking_uuid': metadata.get('odoo_tracking_uuid', ''),
+            'postal_tracking_uuid': '',
         }
         
         if notification:
             event_vals['notification_id'] = notification.id
             event_vals['message_id'] = notification.mail_message_id.id if notification.mail_message_id else False
+            if notification.postal_tracking_uuid:
+                event_vals['postal_tracking_uuid'] = notification.postal_tracking_uuid
         
         event_record = env['mail.postal.event'].sudo().create(event_vals)
         
@@ -172,32 +195,44 @@ class PostalWebhookController(http.Controller):
         
         return {'status': 'ok', 'event_id': event_record.id}
 
-    def _find_notification(self, metadata, external_message_id):
+    def _find_notification(self, message_data, external_message_id):
         """Find the mail.notification record matching the webhook data."""
         env = request.env(user=SUPERUSER_ID)
         Notification = env['mail.notification'].sudo()
         
-        # Try by notification ID from metadata (most reliable)
-        notification_id = metadata.get('odoo_notification_id')
-        if notification_id:
-            notification = Notification.browse(int(notification_id))
-            if notification.exists():
-                return notification
+        # Try to find by message_id in mail.message
+        if external_message_id:
+            # Search for mail.message with this message_id
+            Message = env['mail.message'].sudo()
+            message = Message.search([
+                ('message_id', '=', external_message_id)
+            ], limit=1)
+            
+            if message:
+                # Find notification for this message
+                notification = Notification.search([
+                    ('mail_message_id', '=', message.id)
+                ], limit=1)
+                if notification:
+                    return notification
+            
+            # Also try with angle brackets
+            message = Message.search([
+                ('message_id', '=', f'<{external_message_id}>')
+            ], limit=1)
+            
+            if message:
+                notification = Notification.search([
+                    ('mail_message_id', '=', message.id)
+                ], limit=1)
+                if notification:
+                    return notification
         
-        # Try by tracking UUID from metadata
-        tracking_uuid = metadata.get('odoo_tracking_uuid')
+        # Try by tracking UUID if present
+        tracking_uuid = message_data.get('odoo_tracking_uuid')
         if tracking_uuid:
             notification = Notification.search([
                 ('postal_tracking_uuid', '=', tracking_uuid)
-            ], limit=1)
-            if notification:
-                return notification
-        
-        # Try by message ID from metadata
-        message_id = metadata.get('odoo_message_id')
-        if message_id:
-            notification = Notification.search([
-                ('mail_message_id', '=', int(message_id))
             ], limit=1)
             if notification:
                 return notification
