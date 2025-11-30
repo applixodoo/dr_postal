@@ -3,14 +3,17 @@
  * ========================================================
  */
 
-/* Base status tick styling */
-.o-mail-MessageNotificationPopover .o_dr_postal_status,
-.o-mail-Message .o_dr_postal_status {
+/* Base status indicator */
+.o_dr_postal_status {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     margin-left: 4px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 16px;
     vertical-align: middle;
+    cursor: default;
 }
 
 /* Sent: Single grey tick ✓ */
@@ -20,124 +23,71 @@
 
 .o_dr_postal_sent::after {
     content: '✓';
-    font-weight: 600;
 }
 
 /* Delivered: Double grey ticks ✓✓ */
 .o_dr_postal_delivered {
     color: #8696a0;
+    letter-spacing: -2px;
 }
 
 .o_dr_postal_delivered::after {
     content: '✓✓';
-    font-weight: 600;
-    letter-spacing: -3px;
 }
 
 /* Opened/Read: Double blue ticks ✓✓ */
 .o_dr_postal_opened {
     color: #53bdeb;
+    letter-spacing: -2px;
 }
 
 .o_dr_postal_opened::after {
     content: '✓✓';
-    font-weight: 600;
-    letter-spacing: -3px;
 }
 
 /* Bounced: Red cross ✕ */
 .o_dr_postal_bounced {
-    color: #ea4335;
+    color: #dc3545;
 }
 
 .o_dr_postal_bounced::after {
     content: '✕';
-    font-weight: 700;
-}
-
-/* Status icon container */
-.o_dr_postal_status_icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 16px;
-    cursor: default;
-}
-
-/* Tooltip styling */
-.o_dr_postal_tooltip {
-    font-size: 11px;
-    padding: 4px 8px;
-    white-space: nowrap;
 }
 
 /* Animation for status changes */
-.o_dr_postal_status.o_status_changed {
-    animation: postal_status_pulse 0.3s ease-in-out;
+.o_dr_postal_status {
+    transition: color 0.2s ease;
 }
 
-@keyframes postal_status_pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-}
-
-/* Notification badge styling in message list */
-.o-mail-Notification .o_dr_postal_badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 6px;
-    border-radius: 10px;
+/* Chatter message list */
+.o-mail-Message .o_dr_postal_status {
     font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
 }
 
-.o_dr_postal_badge.o_badge_sent {
-    background-color: #e8eaed;
-    color: #5f6368;
-}
-
-.o_dr_postal_badge.o_badge_delivered {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-
-.o_dr_postal_badge.o_badge_opened {
-    background-color: #e3f2fd;
-    color: #1565c0;
-}
-
-.o_dr_postal_badge.o_badge_bounced {
-    background-color: #ffebee;
-    color: #c62828;
-}
-
-/* Status indicator in chatter */
-.o-mail-Chatter .o_dr_postal_status {
-    font-size: 11px;
+/* Notification popover */
+.o-mail-NotificationPopover .o_dr_postal_status,
+.o-mail-MessageNotificationPopover .o_dr_postal_status {
+    font-size: 10px;
     margin-left: 6px;
 }
 
 /* Dark mode support */
-.o_dark_mode .o_dr_postal_sent,
-.dark .o_dr_postal_sent {
+html.dark .o_dr_postal_sent,
+.o_dark .o_dr_postal_sent {
     color: #8696a0;
 }
 
-.o_dark_mode .o_dr_postal_delivered,
-.dark .o_dr_postal_delivered {
+html.dark .o_dr_postal_delivered,
+.o_dark .o_dr_postal_delivered {
     color: #8696a0;
 }
 
-.o_dark_mode .o_dr_postal_opened,
-.dark .o_dr_postal_opened {
+html.dark .o_dr_postal_opened,
+.o_dark .o_dr_postal_opened {
     color: #53bdeb;
 }
 
-.o_dark_mode .o_dr_postal_bounced,
-.dark .o_dr_postal_bounced {
+html.dark .o_dr_postal_bounced,
+.o_dark .o_dr_postal_bounced {
     color: #ff6b6b;
 }
-

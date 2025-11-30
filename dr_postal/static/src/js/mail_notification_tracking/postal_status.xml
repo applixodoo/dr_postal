@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <!-- 
-    Postal status component template disabled for now.
-    Need to update for Odoo v19 structure.
-    -->
+
+    <t t-name="dr_postal.PostalStatus">
+        <span t-if="shouldShow"
+              t-attf-class="o_dr_postal_status {{ statusClass }}"
+              t-att-title="statusTitle">
+        </span>
+    </t>
+
 </templates>

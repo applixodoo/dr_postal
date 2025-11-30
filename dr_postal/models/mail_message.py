@@ -8,17 +8,17 @@ class MailMessage(models.Model):
     
     _inherit = 'mail.message'
 
-    def _message_notification_format(self):
-        """Include postal tracking fields in notification format for frontend."""
-        result = super()._message_notification_format()
+    def _to_store(self, store, **kwargs):
+        """Include postal tracking fields in store data for frontend."""
+        super()._to_store(store, **kwargs)
         
-        # Add postal fields to each notification
-        for message_id, notifications in result.items():
+        # Get notifications for these messages and add postal state
+        for message in self:
+            notifications = self.env['mail.notification'].search([
+                ('mail_message_id', '=', message.id)
+            ])
             for notif in notifications:
-                notification = self.env['mail.notification'].browse(notif.get('id'))
-                if notification.exists():
-                    notif['postal_state'] = notification.postal_state or 'none'
-                    notif['postal_tracking_uuid'] = notification.postal_tracking_uuid or ''
-        
-        return result
-
+                # Store postal state with the notification
+                store.add(notif, {
+                    'postal_state': notif.postal_state or 'none',
+                })
