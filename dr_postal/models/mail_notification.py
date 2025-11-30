@@ -26,16 +26,10 @@ class MailNotification(models.Model):
         string='Last Postal Event',
         ondelete='set null',
     )
-    postal_bounce_notified = fields.Boolean(
-        string='Bounce Notified',
-        default=False,
-        help='Whether a bounce notification has been posted to chatter',
-    )
 
     def _to_store_defaults(self, target):
         """Add postal_state to the data sent to frontend."""
         defaults = super()._to_store_defaults(target)
-        # Add postal_state to the list of fields
         defaults.append("postal_state")
         return defaults
 
@@ -49,6 +43,9 @@ class MailNotification(models.Model):
         
         State progression: none → sent → delivered → opened
         Bounced is terminal and can happen from any state.
+        
+        For bounced emails, also updates Odoo's notification_status to 'bounce'
+        to trigger the built-in bounce handling UI (envelope icon with retry options).
         """
         self.ensure_one()
         
@@ -58,49 +55,15 @@ class MailNotification(models.Model):
         new_order = state_order.get(event_type, 0)
         
         if new_order > current_order or event_type == 'bounced':
-            self.write({
+            vals = {
                 'postal_state': event_type,
                 'postal_last_event_id': event_record.id,
-            })
+            }
             
-            if event_type == 'bounced' and not self.postal_bounce_notified:
-                self._post_bounce_notification(event_record)
-
-    def _post_bounce_notification(self, event_record):
-        """Post a bounce notification to the related document's chatter."""
-        self.ensure_one()
-        
-        if not self.mail_message_id or not self.mail_message_id.model:
-            return
-        
-        model = self.mail_message_id.model
-        res_id = self.mail_message_id.res_id
-        
-        if not res_id:
-            return
-        
-        try:
-            record = self.env[model].browse(res_id)
-            if not record.exists():
-                return
-        except Exception:
-            return
-        
-        recipient = self.res_partner_id.email or event_record.recipient or _('Unknown recipient')
-        error_msg = event_record.error_message or _('No error details provided')
-        
-        body = _(
-            '<p><strong>⚠️ Email Bounce</strong></p>'
-            '<p>The email to <strong>%(recipient)s</strong> has bounced.</p>'
-            '<p><strong>Reason:</strong> %(error)s</p>',
-            recipient=recipient,
-            error=error_msg,
-        )
-        
-        if hasattr(record, 'message_post'):
-            record.message_post(
-                body=body,
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
-            )
-            self.postal_bounce_notified = True
+            # For bounced emails, trigger Odoo's built-in bounce handling
+            if event_type == 'bounced':
+                vals['notification_status'] = 'bounce'
+                vals['failure_type'] = 'mail_bounce'
+                vals['failure_reason'] = event_record.error_message or _('Email bounced (reported by Postal)')
+            
+            self.write(vals)
