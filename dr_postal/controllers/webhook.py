@@ -93,30 +93,42 @@ class PostalWebhookController(http.Controller):
         - MessageLoaded (opened): has "ip_address" but no "url" or "status"
         - Message Status Events: has "status" key (Sent, Delayed, DeliveryFailed, Held)
         """
+        _logger.info('Postal webhook: _detect_event_type called with keys: %s', list(data.keys()))
+        
         # Check for bounce event (has special structure)
         if 'original_message' in data and 'bounce' in data:
+            _logger.info('Postal webhook: Detected BOUNCE event')
             return 'bounced', data.get('original_message', {})
         
         # Check for click event
         if 'url' in data:
-            return 'opened', data.get('message', {})  # Treat click as opened
+            _logger.info('Postal webhook: Detected CLICK event')
+            return 'opened', data.get('message', {})
         
         # Check for open/loaded event (has ip_address but no status)
         if 'ip_address' in data and 'status' not in data:
+            _logger.info('Postal webhook: Detected OPEN event')
             return 'opened', data.get('message', {})
         
         # Message status events (Sent, Delayed, DeliveryFailed, Held)
-        if 'status' in data:
-            status = data.get('status', '').lower()
+        status_raw = data.get('status')
+        _logger.info('Postal webhook: Raw status value: %r (type: %s)', status_raw, type(status_raw).__name__)
+        
+        if status_raw:
+            status = str(status_raw).lower().strip()
+            _logger.info('Postal webhook: Normalized status: %r', status)
+            
             status_mapping = {
                 'sent': 'sent',
-                'delayed': 'sent',  # Delayed is still in progress, treat as sent
-                'held': 'sent',  # Held is queued, treat as sent
+                'delayed': 'sent',
+                'held': 'sent',
                 'deliveryfailed': 'bounced',
                 'hardfail': 'bounced',
                 'softfail': 'bounced',
             }
-            mapped = status_mapping.get(status, None)
+            mapped = status_mapping.get(status)
+            _logger.info('Postal webhook: Mapped status %r -> %r', status, mapped)
+            
             if mapped:
                 return mapped, data.get('message', {})
             else:
@@ -124,6 +136,7 @@ class PostalWebhookController(http.Controller):
                 return None, data.get('message', {})
         
         # Unknown event type
+        _logger.warning('Postal webhook: No status field found, cannot determine event type')
         return None, data.get('message', {})
 
     def _process_postal_event(self, data):
