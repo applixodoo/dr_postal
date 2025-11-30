@@ -8,9 +8,10 @@ import { _t } from "@web/core/l10n/translation";
  * Patch the Notification model to show WhatsApp-style postal tracking status.
  * 
  * Icon progression:
- * - Flying letter (Odoo default): queued/processing, not yet at SMTP
- * - 1 grey tick: Sent (SMTP received the mail)
- * - 2 grey ticks: Delivered (recipient's mail server received)
+ * - Flying letter (Odoo default): queued/processing
+ * - 1 grey tick: Odoo delivered to Postal (no webhook yet)
+ * - 2 grey ticks: Postal "Sent" webhook received (SMTP confirmed)
+ * - 2 grey ticks: Delivered to recipient's server
  * - 2 blue ticks: Opened/Read
  * - Red envelope (Odoo default): Bounced/Failed (keeps popup functionality)
  */
@@ -33,11 +34,10 @@ const notificationPatch = {
             return "o_dr_postal_status o_dr_postal_delivered";  // 2 grey ticks
         }
         if (postalState === "sent") {
-            return "o_dr_postal_status o_dr_postal_sent";  // 1 grey tick
+            return "o_dr_postal_status o_dr_postal_delivered";  // 2 grey ticks (webhook received)
         }
         
-        // For 'sent' notification_status without postal tracking, show 1 tick
-        // This means Odoo sent it but we haven't received Postal confirmation yet
+        // Mail sent by Odoo but no Postal webhook yet = 1 tick
         if (this.notification_status === "sent" || this.notification_status === "pending") {
             return "o_dr_postal_status o_dr_postal_sent";  // 1 grey tick
         }
@@ -61,12 +61,12 @@ const notificationPatch = {
             return _t("Delivered");
         }
         if (postalState === "sent") {
-            return _t("Sent");
+            return _t("Sent to SMTP");
         }
         
         // For sent notification_status without postal tracking
         if (this.notification_status === "sent" || this.notification_status === "pending") {
-            return _t("Sent");
+            return _t("Sent to Mail Server");
         }
         
         // Default: use Odoo's standard titles
