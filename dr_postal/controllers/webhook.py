@@ -13,7 +13,7 @@ _logger = logging.getLogger(__name__)
 class PostalWebhookController(http.Controller):
     """Handle incoming webhooks from Postal mail server."""
 
-    @http.route('/postal/webhook', type='json', auth='none', methods=['POST'], csrf=False)
+    @http.route('/postal/webhook', type='jsonrpc', auth='none', methods=['POST'], csrf=False)
     def postal_webhook(self, **kwargs):
         """
         Receive and process postal webhook events.
