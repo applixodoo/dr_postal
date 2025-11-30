@@ -32,12 +32,6 @@ class MailNotification(models.Model):
         help='Whether a bounce notification has been posted to chatter',
     )
 
-    def _to_store(self, store, fields=None, **kwargs):
-        """Include postal_state in store data for frontend."""
-        super()._to_store(store, fields=fields, **kwargs)
-        for notif in self:
-            store.add(notif, {'postal_state': notif.postal_state or 'none'})
-
     def _generate_tracking_uuid(self):
         """Generate a new tracking UUID for this notification."""
         return str(uuid.uuid4())

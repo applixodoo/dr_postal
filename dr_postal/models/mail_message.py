@@ -8,15 +8,6 @@ class MailMessage(models.Model):
     
     _inherit = 'mail.message'
 
-    def _to_store(self, store, fields=None, **kwargs):
-        """Include postal tracking fields in store data for frontend."""
-        super()._to_store(store, fields=fields, **kwargs)
-        
-        # Get notifications for these messages and add postal state
-        for message in self:
-            notifications = self.env['mail.notification'].search([
-                ('mail_message_id', '=', message.id)
-            ])
-            for notif in notifications:
-                # Store postal state with the notification
-                store.add(notif, {'postal_state': notif.postal_state or 'none'})
+    # Remove _to_store override for now - it's causing recursion issues
+    # The postal_state field exists on mail.notification and can be read directly
+    # UI will need to fetch this data separately or we'll find another approach
