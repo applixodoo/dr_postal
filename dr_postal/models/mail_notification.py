@@ -32,13 +32,11 @@ class MailNotification(models.Model):
         help='Whether a bounce notification has been posted to chatter',
     )
 
-    def _to_store(self, store, **kwargs):
+    def _to_store(self, store, fields=None, **kwargs):
         """Include postal_state in store data for frontend."""
-        super()._to_store(store, **kwargs)
+        super()._to_store(store, fields=fields, **kwargs)
         for notif in self:
-            store.add(notif, {
-                'postal_state': notif.postal_state or 'none',
-            })
+            store.add(notif, {'postal_state': notif.postal_state or 'none'})
 
     def _generate_tracking_uuid(self):
         """Generate a new tracking UUID for this notification."""
@@ -50,26 +48,20 @@ class MailNotification(models.Model):
         
         State progression: none → sent → delivered → opened
         Bounced is terminal and can happen from any state.
-        
-        :param event_type: The event type ('sent', 'delivered', 'opened', 'bounced')
-        :param event_record: The mail.postal.event record
         """
         self.ensure_one()
         
-        # State hierarchy for progression (bounced is terminal, always applies)
         state_order = {'none': 0, 'sent': 1, 'delivered': 2, 'opened': 3, 'bounced': 99}
         
         current_order = state_order.get(self.postal_state, 0)
         new_order = state_order.get(event_type, 0)
         
-        # Update if new state is higher in hierarchy or if bounced
         if new_order > current_order or event_type == 'bounced':
             self.write({
                 'postal_state': event_type,
                 'postal_last_event_id': event_record.id,
             })
             
-            # Handle bounce notification
             if event_type == 'bounced' and not self.postal_bounce_notified:
                 self._post_bounce_notification(event_record)
 
@@ -80,7 +72,6 @@ class MailNotification(models.Model):
         if not self.mail_message_id or not self.mail_message_id.model:
             return
         
-        # Get the related document
         model = self.mail_message_id.model
         res_id = self.mail_message_id.res_id
         
@@ -94,7 +85,6 @@ class MailNotification(models.Model):
         except Exception:
             return
         
-        # Build bounce message
         recipient = self.res_partner_id.email or event_record.recipient or _('Unknown recipient')
         error_msg = event_record.error_message or _('No error details provided')
         
@@ -106,13 +96,10 @@ class MailNotification(models.Model):
             error=error_msg,
         )
         
-        # Post message to chatter
         if hasattr(record, 'message_post'):
             record.message_post(
                 body=body,
                 message_type='notification',
                 subtype_xmlid='mail.mt_note',
             )
-            
-            # Mark as notified to prevent duplicates
             self.postal_bounce_notified = True

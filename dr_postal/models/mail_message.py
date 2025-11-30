@@ -8,9 +8,9 @@ class MailMessage(models.Model):
     
     _inherit = 'mail.message'
 
-    def _to_store(self, store, **kwargs):
+    def _to_store(self, store, fields=None, **kwargs):
         """Include postal tracking fields in store data for frontend."""
-        super()._to_store(store, **kwargs)
+        super()._to_store(store, fields=fields, **kwargs)
         
         # Get notifications for these messages and add postal state
         for message in self:
@@ -19,6 +19,4 @@ class MailMessage(models.Model):
             ])
             for notif in notifications:
                 # Store postal state with the notification
-                store.add(notif, {
-                    'postal_state': notif.postal_state or 'none',
-                })
+                store.add(notif, {'postal_state': notif.postal_state or 'none'})
