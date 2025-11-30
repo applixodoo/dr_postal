@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="dr_postal.PostalStatus">
+        <span 
+            t-if="shouldShow"
+            t-attf-class="o_dr_postal_status o_dr_postal_status_icon {{ statusClass }} {{ props.className }}"
+            t-att-title="statusTooltip"
+            t-att-data-tooltip="statusTooltip">
+        </span>
+    </t>
+
+</templates>
+

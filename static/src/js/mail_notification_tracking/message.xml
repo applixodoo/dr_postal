@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Extend Message template to show postal status -->
+    <t t-name="dr_postal.MessagePostalStatus" t-inherit="mail.Message" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('o-mail-Message-header')]//small[hasclass('o-mail-Message-date')]" position="after">
+            <span t-if="hasPostalTracking" 
+                  t-attf-class="o_dr_postal_status o_dr_postal_status_icon o_dr_postal_{{ postalState }}"
+                  t-att-title="postalState === 'sent' ? env._t('Sent') : postalState === 'delivered' ? env._t('Delivered') : postalState === 'opened' ? env._t('Read') : postalState === 'bounced' ? env._t('Bounced') : ''">
+            </span>
+        </xpath>
+    </t>
+
+    <!-- Extend MessageNotificationPopover to show postal status per recipient -->
+    <t t-name="dr_postal.MessageNotificationPopoverPostal" t-inherit="mail.MessageNotificationPopover" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('o-mail-MessageNotificationPopover-notification')]" position="inside">
+            <span t-if="hasPostalTracking(notification)"
+                  t-attf-class="o_dr_postal_status o_dr_postal_status_icon {{ getPostalStateClass(notification) }} ms-1"
+                  t-att-title="getPostalStateTooltip(notification)">
+            </span>
+        </xpath>
+    </t>
+
+</templates>
+
