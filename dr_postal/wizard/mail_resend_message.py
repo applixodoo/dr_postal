@@ -165,7 +165,7 @@ class PartnerResend(models.TransientModel):
                 'subject': message.subject or '',
                 'body_html': message.body,
                 'auto_delete': True,
-                'notification': True,
+                'is_notification': True,
             }
             
             mail = self.env['mail.mail'].sudo().create(mail_values)
