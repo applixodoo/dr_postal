@@ -13,13 +13,18 @@ _logger = logging.getLogger(__name__)
 class PostalWebhookController(http.Controller):
     """Handle incoming webhooks from Postal mail server.
     
-    Postal webhook documentation: https://docs.postalserver.io/developer/webhooks
-    
-    Event types and their payload structures:
-    - MessageSent/MessageDelayed/MessageDeliveryFailed/MessageHeld: has "status" field
-    - MessageBounced: has "original_message" and "bounce" objects
-    - MessageLoaded (opened): has "ip_address" but no "status" or "url"
-    - MessageLinkClicked: has "url" and "ip_address"
+    Postal webhook structure:
+    {
+        "event": "MessageSent",  // Event type
+        "timestamp": 1764515384.93,
+        "uuid": "...",
+        "payload": {
+            // Actual event data here
+            "status": "Sent",
+            "message": {...},
+            ...
+        }
+    }
     """
 
     @http.route([
@@ -67,100 +72,62 @@ class PostalWebhookController(http.Controller):
             'dr_postal.webhook_token', ''
         )
         
-        # If no token configured, allow all (for development)
         if not configured_token:
             _logger.warning('Postal webhook: No token configured, allowing request')
             return True
         
-        # Check URL token first (preferred method)
         if url_token and url_token == configured_token:
             return True
         
-        # Fallback: check header
         header_token = request.httprequest.headers.get('X-Postal-Token', '')
         if header_token and header_token == configured_token:
             return True
         
         return False
 
-    def _detect_event_type(self, data):
-        """
-        Detect the event type based on payload structure.
-        
-        Based on https://docs.postalserver.io/developer/webhooks:
-        - MessageBounced: has "original_message" and "bounce" keys
-        - MessageLinkClicked: has "url" key
-        - MessageLoaded (opened): has "ip_address" but no "url" or "status"
-        - Message Status Events: has "status" key (Sent, Delayed, DeliveryFailed, Held)
-        """
-        _logger.info('Postal webhook: _detect_event_type called with keys: %s', list(data.keys()))
-        
-        # Check for bounce event (has special structure)
-        if 'original_message' in data and 'bounce' in data:
-            _logger.info('Postal webhook: Detected BOUNCE event')
-            return 'bounced', data.get('original_message', {})
-        
-        # Check for click event
-        if 'url' in data:
-            _logger.info('Postal webhook: Detected CLICK event')
-            return 'opened', data.get('message', {})
-        
-        # Check for open/loaded event (has ip_address but no status)
-        if 'ip_address' in data and 'status' not in data:
-            _logger.info('Postal webhook: Detected OPEN event')
-            return 'opened', data.get('message', {})
-        
-        # Message status events (Sent, Delayed, DeliveryFailed, Held)
-        status_raw = data.get('status')
-        _logger.info('Postal webhook: Raw status value: %r (type: %s)', status_raw, type(status_raw).__name__)
-        
-        if status_raw:
-            status = str(status_raw).lower().strip()
-            _logger.info('Postal webhook: Normalized status: %r', status)
-            
-            status_mapping = {
-                'sent': 'sent',
-                'delayed': 'sent',
-                'held': 'sent',
-                'deliveryfailed': 'bounced',
-                'hardfail': 'bounced',
-                'softfail': 'bounced',
-            }
-            mapped = status_mapping.get(status)
-            _logger.info('Postal webhook: Mapped status %r -> %r', status, mapped)
-            
-            if mapped:
-                return mapped, data.get('message', {})
-            else:
-                _logger.warning('Postal webhook: Unknown status value: %s', status)
-                return None, data.get('message', {})
-        
-        # Unknown event type
-        _logger.warning('Postal webhook: No status field found, cannot determine event type')
-        return None, data.get('message', {})
-
     def _process_postal_event(self, data):
         """Process a postal webhook event."""
         env = request.env(user=SUPERUSER_ID)
         
-        # Log incoming payload for debugging
-        _logger.info('Postal webhook: Received payload keys: %s', list(data.keys()))
+        # Postal wraps events: {event, timestamp, uuid, payload}
+        event_name = data.get('event', '')
+        payload = data.get('payload', {})
         
-        # Detect event type based on payload structure
-        event_type, message_data = self._detect_event_type(data)
+        _logger.info('Postal webhook: Event=%s, Payload keys=%s', event_name, list(payload.keys()) if payload else 'None')
+        
+        # Map Postal event names to our states
+        event_mapping = {
+            'MessageSent': 'sent',
+            'MessageDelayed': 'sent',
+            'MessageDeliveryFailed': 'bounced',
+            'MessageHeld': 'sent',
+            'MessageBounced': 'bounced',
+            'MessageLinkClicked': 'opened',
+            'MessageLoaded': 'opened',
+        }
+        
+        event_type = event_mapping.get(event_name)
         
         if not event_type:
-            _logger.warning('Postal webhook: Could not determine event type from payload')
-            return {'status': 'ok', 'message': 'Unknown event type, ignored'}
+            _logger.warning('Postal webhook: Unknown event name: %s', event_name)
+            return {'status': 'ok', 'message': f'Unknown event: {event_name}, ignored'}
         
-        _logger.info('Postal webhook: Detected event type: %s', event_type)
+        _logger.info('Postal webhook: Mapped %s -> %s', event_name, event_type)
+        
+        # Extract message data from payload
+        # For most events, message info is in payload.message
+        # For bounce events, it's in payload.original_message
+        if event_name == 'MessageBounced':
+            message_data = payload.get('original_message', {})
+        else:
+            message_data = payload.get('message', {})
         
         # Extract identifiers
         external_message_id = message_data.get('message_id', '')
         recipient = message_data.get('to', '')
         
-        # Get timestamp - Postal uses Unix timestamp
-        timestamp = data.get('timestamp', 0)
+        # Get timestamp
+        timestamp = data.get('timestamp') or payload.get('timestamp', 0)
         if timestamp:
             try:
                 event_datetime = datetime.fromtimestamp(float(timestamp))
@@ -172,22 +139,21 @@ class PostalWebhookController(http.Controller):
         # Build error message for failures
         error_message = ''
         if event_type == 'bounced':
-            if 'bounce' in data:
-                # Bounce event has special structure
-                bounce_info = data.get('bounce', {})
+            if event_name == 'MessageBounced':
+                bounce_info = payload.get('bounce', {})
                 error_message = f"Bounce from: {bounce_info.get('from', 'unknown')}\nSubject: {bounce_info.get('subject', 'N/A')}"
             else:
-                error_message = data.get('details', '')
-                if data.get('output'):
-                    error_message += f"\n\nServer response: {data.get('output', '')}"
+                error_message = payload.get('details', '')
+                if payload.get('output'):
+                    error_message += f"\n\nServer response: {payload.get('output', '')}"
         
-        # Find notification by message_id
+        # Find notification
         notification = self._find_notification(message_data, external_message_id)
         
         if not notification:
             _logger.info(
-                'Postal webhook: No matching notification found for event %s (message_id: %s, to: %s)',
-                event_type, external_message_id, recipient
+                'Postal webhook: No matching notification found (message_id: %s, to: %s)',
+                external_message_id, recipient
             )
         
         # Create postal event record
@@ -214,7 +180,7 @@ class PostalWebhookController(http.Controller):
             notification.sudo()._update_postal_state(event_type, event_record)
         
         _logger.info(
-            'Postal webhook: Processed %s event for %s (event_id: %s)',
+            'Postal webhook: Created event %s for %s (id: %s)',
             event_type, recipient, event_record.id
         )
         
@@ -225,7 +191,6 @@ class PostalWebhookController(http.Controller):
         env = request.env(user=SUPERUSER_ID)
         Notification = env['mail.notification'].sudo()
         
-        # Try to find by message_id in mail.message
         if external_message_id:
             Message = env['mail.message'].sudo()
             
@@ -241,7 +206,7 @@ class PostalWebhookController(http.Controller):
                 if notification:
                     return notification
             
-            # Also try with angle brackets
+            # Try with angle brackets
             message = Message.search([
                 ('message_id', '=', f'<{external_message_id}>')
             ], limit=1)
@@ -253,7 +218,7 @@ class PostalWebhookController(http.Controller):
                 if notification:
                     return notification
         
-        # Try by tracking UUID if present
+        # Try by tracking UUID
         tracking_uuid = message_data.get('odoo_tracking_uuid')
         if tracking_uuid:
             notification = Notification.search([
