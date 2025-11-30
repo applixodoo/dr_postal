@@ -30,8 +30,7 @@ class MailNotification(models.Model):
     def _to_store_defaults(self, target):
         """Add postal_state to the data sent to frontend."""
         defaults = super()._to_store_defaults(target)
-        defaults.append("postal_state")
-        return defaults
+        return defaults + ["postal_state"]
 
     def _generate_tracking_uuid(self):
         """Generate a new tracking UUID for this notification."""

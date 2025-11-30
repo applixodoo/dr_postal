@@ -7,8 +7,10 @@ import { _t } from "@web/core/l10n/translation";
 /**
  * Patch the Notification model to show WhatsApp-style postal tracking status.
  * 
+ * The postal_state is sent from Python via _to_store_defaults.
+ * 
  * For sent/delivered/opened: Show custom tick icons
- * For bounced: Use Odoo's default so popup functionality works
+ * For bounced/failures: Use Odoo's default so popup functionality works
  */
 
 /** @type {import("models").Notification} */
@@ -26,7 +28,7 @@ const notificationPatch = {
         if (postalState === "opened") {
             return "o_dr_postal_status o_dr_postal_opened";
         }
-        // Default: use Odoo's standard icons
+        // Default: use Odoo's standard icons (handles bounce, exception, etc.)
         return super.statusIcon;
     },
 
@@ -41,8 +43,12 @@ const notificationPatch = {
         if (postalState === "opened") {
             return _t("Read");
         }
+        // Default: use Odoo's standard titles
         return super.statusTitle;
     },
 };
 
 patch(Notification.prototype, notificationPatch);
+
+// Register postal_state as a tracked field on Notification
+Notification.prototype.postal_state = undefined;
