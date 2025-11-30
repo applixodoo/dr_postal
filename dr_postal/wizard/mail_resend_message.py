@@ -172,33 +172,44 @@ class PartnerResend(models.TransientModel):
                 'recipient_ids': [(6, 0, [partner.id])],
                 'subject': message.subject or '',
                 'body_html': message.body,
-                'auto_delete': True,
+                'auto_delete': False,  # Don't auto-delete so we can check state
                 'is_notification': True,
             }
             
             mail = self.env['mail.mail'].sudo().create(mail_values)
             
             # Send the mail
+            send_failed = False
+            failure_reason = ''
             try:
-                mail.send(raise_exception=False)
-                # Update notification status based on mail state
-                if mail.state == 'sent':
-                    sent_vals = {'notification_status': 'sent'}
-                    if 'postal_state' in self.env['mail.notification']._fields:
-                        sent_vals['postal_state'] = 'sent'
-                    notification.sudo().write(sent_vals)
-                elif mail.state == 'exception':
-                    exception_vals = {
-                        'notification_status': 'exception',
-                        'failure_type': mail.failure_type,
-                        'failure_reason': mail.failure_reason,
-                    }
-                    notification.sudo().write(exception_vals)
+                mail.send(raise_exception=True)
             except Exception as e:
+                send_failed = True
+                failure_reason = str(e)
+            
+            # Check mail state after send
+            if not send_failed and mail.exists() and mail.state == 'exception':
+                send_failed = True
+                failure_reason = mail.failure_reason or 'Send failed'
+            
+            # Update notification based on result
+            if send_failed:
                 notification.sudo().write({
                     'notification_status': 'exception',
-                    'failure_reason': str(e),
+                    'failure_reason': failure_reason,
                 })
+            else:
+                sent_vals = {
+                    'notification_status': 'sent',
+                    'failure_type': False,
+                    'failure_reason': False,
+                }
+                if 'postal_state' in self.env['mail.notification']._fields:
+                    sent_vals['postal_state'] = 'sent'
+                notification.sudo().write(sent_vals)
+                # Clean up the mail record
+                if mail.exists():
+                    mail.unlink()
             
             # Notify about the update
             message._notify_message_notification_update()
