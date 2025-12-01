@@ -1,47 +1,77 @@
 /** @odoo-module **/
 
-import { MessageNotificationPopover } from "@mail/core/common/message_notification_popover";
-import { patch } from "@web/core/utils/patch";
-import { useService } from "@web/core/utils/hooks";
+import { registry } from "@web/core/registry";
 
 /**
- * Patch the MessageNotificationPopover to handle clicks on postal status icons.
- * When clicking on WhatsApp-style ticks, opens a popup with tracking events.
+ * Service to handle clicks on postal status icons in the notification popover.
+ * Uses event delegation to catch clicks on .o_dr_postal_status elements.
  */
-
-patch(MessageNotificationPopover.prototype, {
-    setup() {
-        super.setup(...arguments);
-        this.action = useService("action");
-    },
-
-    /**
-     * Handle click on a notification row to open postal events.
-     * @param {Object} notification - The notification record
-     */
-    onClickNotificationRow(notification) {
-        const postalState = notification.postal_state;
-        console.log("DR_POSTAL: Popover notification clicked", notification.id, "postal_state:", postalState);
+export const postalPopoverClickService = {
+    dependencies: ["action"],
+    
+    start(env, { action }) {
+        console.log("DR_POSTAL: Postal popover click service started");
         
-        // Only open popup if there's postal tracking
-        if (postalState && postalState !== "none") {
-            this.action.doAction({
+        // Use event delegation to catch clicks on postal status icons
+        document.addEventListener("click", async (ev) => {
+            // Check if clicked on a postal status icon
+            const postalIcon = ev.target.closest(".o_dr_postal_status");
+            if (!postalIcon) {
+                return;
+            }
+            
+            console.log("DR_POSTAL: Postal icon clicked in popover");
+            
+            // Find the popover container
+            const popoverContent = postalIcon.closest(".o-mail-MessageNotificationPopover");
+            if (!popoverContent) {
+                console.log("DR_POSTAL: Not in popover, ignoring");
+                return;
+            }
+            
+            ev.preventDefault();
+            ev.stopPropagation();
+            
+            // Try to find the notification ID from the data
+            // The notification row structure contains the notification info
+            // We'll search by the message_id which we can get from the message component
+            
+            // Find the message element that opened this popover
+            const messageEl = document.querySelector(".o-mail-Message:has(.o-mail-Message-notification)");
+            if (messageEl) {
+                const messageId = messageEl.dataset?.messageId;
+                console.log("DR_POSTAL: Found message ID:", messageId);
+                
+                if (messageId) {
+                    await action.doAction({
+                        name: "Email Tracking",
+                        type: "ir.actions.act_window",
+                        res_model: "mail.postal.event",
+                        view_mode: "list",
+                        views: [[false, "list"]],
+                        domain: [["message_id", "=", parseInt(messageId)]],
+                        target: "new",
+                        context: { create: false, edit: false, delete: false },
+                    });
+                    return;
+                }
+            }
+            
+            // Fallback: open all events (no filter)
+            console.log("DR_POSTAL: No message ID found, opening all events");
+            await action.doAction({
                 name: "Email Tracking",
                 type: "ir.actions.act_window",
                 res_model: "mail.postal.event",
                 view_mode: "list",
                 views: [[false, "list"]],
-                domain: [["notification_id", "=", notification.id]],
                 target: "new",
                 context: { create: false, edit: false, delete: false },
             });
-            // Close the popover
-            if (this.props.close) {
-                this.props.close();
-            }
-        }
+        }, true); // Use capture phase
+        
+        return {};
     },
-});
+};
 
-console.log("DR_POSTAL: MessageNotificationPopover patch loaded");
-
+registry.category("services").add("postal_popover_click", postalPopoverClickService);
