@@ -57,6 +57,11 @@ export const postalPopoverClickService = {
                     edit: false, 
                     delete: false,
                 },
+                flags: {
+                    withSearchBar: false,
+                    searchMenuTypes: [],
+                    hasSelectors: false,
+                },
             });
         }, true);
         
