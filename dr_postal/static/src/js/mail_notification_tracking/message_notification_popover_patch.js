@@ -65,10 +65,13 @@ export const postalPopoverClickService = {
 
             // Tag the freshly opened modal so CSS can scope styling
             setTimeout(() => {
-                const modals = document.querySelectorAll(".modal.o_act_window");
-                const modal = modals[modals.length - 1];
-                if (modal) {
-                    modal.classList.add("o_dr_postal_popup_modal");
+                const modalBodies = document.querySelectorAll(".modal-body.o_act_window");
+                const currentModal = modalBodies[modalBodies.length - 1];
+                if (
+                    currentModal &&
+                    currentModal.querySelector('.o_list_view[data-res-model="mail.postal.event"]')
+                ) {
+                    currentModal.classList.add("o_dr_postal_popup_modal");
                 }
             }, 50);
 
