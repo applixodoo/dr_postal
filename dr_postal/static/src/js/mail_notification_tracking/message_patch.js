@@ -4,20 +4,27 @@ import { Message } from "@mail/core/common/message";
 import { patch } from "@web/core/utils/patch";
 import { toRaw } from "@odoo/owl";
 import { markEventHandled } from "@web/core/utils/misc";
+import { postalPopoverState } from "./message_notification_popover_patch";
 
 /**
- * Patch the Message component to open the resend dialog for failed notifications.
- * This restores the v18 behavior where clicking on a bounce opens a dialog
- * with options to retry or ignore the failed email.
+ * Patch the Message component to:
+ * 1. Store message ID when opening notification popover (for postal click handler)
+ * 2. Open resend dialog for failed notifications
  */
 
 patch(Message.prototype, {
     /**
-     * Override onClickNotification to open resend dialog for failures.
-     * For non-failures, show the regular popover (where postal tracking clicks are handled).
+     * Override onClickNotification to:
+     * - Store message ID for postal tracking popup
+     * - Open resend dialog for failures
+     * - Show regular popover otherwise
      */
     onClickNotification(ev) {
         const message = toRaw(this.message);
+        
+        // Store message ID for postal tracking click handler
+        postalPopoverState.currentMessageId = message.id;
+        console.log("DR_POSTAL: Stored message ID for popover:", message.id);
         
         // Handle failures - open resend dialog
         if (message.failureNotifications.length > 0) {
@@ -30,7 +37,9 @@ patch(Message.prototype, {
             return;
         }
         
-        // Default: show the regular popover (postal icon clicks handled there)
+        // Default: show the regular popover
         this.popover.open(ev.target, { message });
     },
 });
+
+console.log("DR_POSTAL: Message patch loaded");
