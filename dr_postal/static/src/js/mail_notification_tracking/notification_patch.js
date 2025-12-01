@@ -55,13 +55,13 @@ const notificationPatch = {
         }
         
         if (postalState === "opened") {
-            return _t("Read");
+            return _t("Read - Click for details");
         }
         if (postalState === "delivered") {
-            return _t("Delivered");
+            return _t("Delivered - Click for details");
         }
         if (postalState === "sent") {
-            return _t("Sent to SMTP");
+            return _t("Sent to SMTP - Click for details");
         }
         
         // For sent notification_status without postal tracking
@@ -71,6 +71,14 @@ const notificationPatch = {
         
         // Default: use Odoo's standard titles
         return super.statusTitle;
+    },
+
+    /**
+     * Check if this notification has postal tracking (can show popup)
+     */
+    get hasPostalTracking() {
+        const postalState = this.postal_state;
+        return postalState && postalState !== "none";
     },
 };
 

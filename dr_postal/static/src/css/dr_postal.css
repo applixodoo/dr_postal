@@ -20,6 +20,11 @@
     vertical-align: middle;
     width: 16px;
     height: 12px;
+    cursor: pointer;
+}
+
+.o_dr_postal_status:hover {
+    opacity: 0.7;
 }
 
 /* Remove any inherited FontAwesome styles */

@@ -66,3 +66,23 @@ class MailNotification(models.Model):
                 vals['failure_reason'] = event_record.error_message or _('Email bounced (reported by Postal)')
             
             self.write(vals)
+
+    def action_open_postal_events(self):
+        """Open a popup showing all postal events for this notification."""
+        self.ensure_one()
+        
+        # Get all events for this notification
+        events = self.env['mail.postal.event'].search([
+            ('notification_id', '=', self.id)
+        ])
+        
+        return {
+            'name': _('Email Tracking: %s') % (self.res_partner_id.name or self.mail_email_address or _('Unknown')),
+            'type': 'ir.actions.act_window',
+            'res_model': 'mail.postal.event',
+            'view_mode': 'list',
+            'view_id': self.env.ref('dr_postal.mail_postal_event_view_tree_popup').id,
+            'domain': [('notification_id', '=', self.id)],
+            'target': 'new',
+            'context': {'create': False, 'edit': False, 'delete': False},
+        }
