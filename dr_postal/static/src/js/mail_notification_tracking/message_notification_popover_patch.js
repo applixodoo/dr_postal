@@ -36,43 +36,28 @@ export const postalPopoverClickService = {
             
             // Get message ID from global state
             const messageId = postalPopoverState.currentMessageId;
-            console.log("DR_POSTAL: Click on postal icon, message ID:", messageId);
+            console.log("DR_POSTAL: Opening events for message ID:", messageId);
             
             if (!messageId) {
                 console.log("DR_POSTAL: No message ID in state");
                 return;
             }
             
-            // Open the events popup
-            // Use the action XMLID to get proper views
-            try {
-                await action.doAction("dr_postal.mail_postal_event_action_popup", {
-                    additionalContext: {
-                        active_id: messageId,
-                        search_default_message_id: messageId,
-                    },
-                    props: {
-                        domain: [["message_id", "=", messageId]],
-                    },
-                });
-            } catch (e) {
-                console.log("DR_POSTAL: Falling back to inline action");
-                // Fallback to inline action definition
-                await action.doAction({
-                    name: "Email Tracking",
-                    type: "ir.actions.act_window",
-                    res_model: "mail.postal.event",
-                    view_mode: "list",
-                    views: [[false, "list"]],
-                    domain: [["message_id", "=", messageId]],
-                    target: "new",
-                    context: { 
-                        create: false, 
-                        edit: false, 
-                        delete: false,
-                    },
-                });
-            }
+            // Open the events popup with domain filter
+            await action.doAction({
+                name: "Email Tracking",
+                type: "ir.actions.act_window",
+                res_model: "mail.postal.event",
+                view_mode: "list",
+                views: [[false, "list"]],
+                domain: [["message_id", "=", messageId]],
+                target: "new",
+                context: { 
+                    create: false, 
+                    edit: false, 
+                    delete: false,
+                },
+            });
         }, true);
         
         return {};
