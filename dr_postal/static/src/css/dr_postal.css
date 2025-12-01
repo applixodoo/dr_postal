@@ -4,20 +4,22 @@
  * 
  * These classes show tick marks like WhatsApp:
  * - ✓ (grey) = Sent to mail server
- * - ✓✓ (grey) = SMTP confirmed / Delivered
- * - ✓✓ (blue) = Opened/Read
+ * - ✓✓ (grey, overlapping) = SMTP confirmed / Delivered
+ * - ✓✓ (blue, overlapping) = Opened/Read
  */
 
 /* Base status indicator */
 .o_dr_postal_status {
-    display: inline-flex !important;
-    align-items: center;
+    display: inline-block !important;
+    position: relative;
     font-family: system-ui, -apple-system, sans-serif;
     font-style: normal;
     font-weight: normal;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     vertical-align: middle;
+    width: 16px;
+    height: 12px;
 }
 
 /* Remove any inherited FontAwesome styles */
@@ -26,47 +28,45 @@
     display: none !important;
 }
 
-/* Sent: Single grey tick ✓ */
+/* Sent: Single grey tick */
 .o_dr_postal_sent::after {
-    content: '✓';
+    content: '\2713';
     color: #8696a0;
+    position: absolute;
+    right: 0;
 }
 
-/* Delivered: Double grey ticks ✓✓ (side by side) */
-.o_dr_postal_delivered::after {
-    content: '✓✓';
-    color: #8696a0;
-    letter-spacing: -3px;
-    margin-right: -2px;
-}
-
-/* Opened/Read: Double blue ticks ✓✓ */
+/* Double tick base - first tick */
+.o_dr_postal_delivered::after,
 .o_dr_postal_opened::after {
-    content: '✓✓';
+    content: '\2713';
+    position: absolute;
+    right: 0;
+}
+
+/* Double tick - second tick (overlapping) */
+.o_dr_postal_delivered::before,
+.o_dr_postal_opened::before {
+    content: '\2713' !important;
+    display: block !important;
+    position: absolute;
+    right: 4px;
+}
+
+/* Delivered: Double grey ticks */
+.o_dr_postal_delivered::after,
+.o_dr_postal_delivered::before {
+    color: #8696a0;
+}
+
+/* Opened/Read: Double blue ticks */
+.o_dr_postal_opened::after,
+.o_dr_postal_opened::before {
     color: #53bdeb;
-    letter-spacing: -3px;
-    margin-right: -2px;
 }
 
 /* Ensure proper display in message notifications */
 .o-mail-Message-notification .o_dr_postal_status,
 .o-mail-MessageNotificationPopover .o_dr_postal_status {
-    display: inline-flex !important;
-    white-space: nowrap;
-}
-
-/* Dark mode support */
-html.dark .o_dr_postal_sent::after,
-.o_dark .o_dr_postal_sent::after {
-    color: #8696a0;
-}
-
-html.dark .o_dr_postal_delivered::after,
-.o_dark .o_dr_postal_delivered::after {
-    color: #8696a0;
-}
-
-html.dark .o_dr_postal_opened::after,
-.o_dark .o_dr_postal_opened::after {
-    color: #53bdeb;
+    display: inline-block !important;
 }
