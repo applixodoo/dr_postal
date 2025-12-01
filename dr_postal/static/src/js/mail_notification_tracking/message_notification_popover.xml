@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Extend the popover to make postal status icons clickable -->
+    <t t-name="mail.MessageNotificationPopover" t-inherit="mail.MessageNotificationPopover" t-inherit-mode="extension">
+        <!-- Make the notification row clickable for postal tracking -->
+        <xpath expr="//div[@t-foreach='otherNotifications']" position="attributes">
+            <attribute name="class">d-flex align-items-center</attribute>
+            <attribute name="t-att-class">{'cursor-pointer': notification.postal_state and notification.postal_state !== 'none'}</attribute>
+            <attribute name="t-on-click">() => this.onClickNotificationRow(notification)</attribute>
+        </xpath>
+        
+        <!-- Also for follower notifications -->
+        <xpath expr="//div[@t-foreach='followerNotifications']" position="attributes">
+            <attribute name="class">d-flex align-items-center</attribute>
+            <attribute name="t-att-class">{'cursor-pointer': notification.postal_state and notification.postal_state !== 'none'}</attribute>
+            <attribute name="t-on-click">() => this.onClickNotificationRow(notification)</attribute>
+        </xpath>
+    </t>
+
+</templates>
+
