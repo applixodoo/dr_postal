@@ -14,9 +14,9 @@ export const postalPopoverState = {
  * Service to handle clicks on postal status icons in the notification popover.
  */
 export const postalPopoverClickService = {
-    dependencies: ["action", "orm"],
+    dependencies: ["action"],
     
-    start(env, { action, orm }) {
+    start(env, { action }) {
         console.log("DR_POSTAL: Postal popover click service started");
         
         // Global click handler for postal icons in popover
@@ -43,40 +43,36 @@ export const postalPopoverClickService = {
                 return;
             }
             
-            // Get view IDs
-            let viewId = false;
-            let searchViewId = false;
-            
-            try {
-                const viewRef = await orm.call("ir.model.data", "check_object_reference", [
-                    "dr_postal", "mail_postal_event_view_tree_popup"
-                ]);
-                viewId = viewRef ? viewRef[1] : false;
-                
-                const searchRef = await orm.call("ir.model.data", "check_object_reference", [
-                    "dr_postal", "mail_postal_event_view_search_popup"
-                ]);
-                searchViewId = searchRef ? searchRef[1] : false;
-            } catch (e) {
-                console.log("DR_POSTAL: Could not get view IDs", e);
-            }
-            
             // Open the events popup
-            await action.doAction({
-                name: "Email Tracking",
-                type: "ir.actions.act_window",
-                res_model: "mail.postal.event",
-                view_mode: "list",
-                views: [[viewId, "list"]],
-                search_view_id: searchViewId ? [searchViewId, "search"] : false,
-                domain: [["message_id", "=", messageId]],
-                target: "new",
-                context: { 
-                    create: false, 
-                    edit: false, 
-                    delete: false,
-                },
-            });
+            // Use the action XMLID to get proper views
+            try {
+                await action.doAction("dr_postal.mail_postal_event_action_popup", {
+                    additionalContext: {
+                        active_id: messageId,
+                        search_default_message_id: messageId,
+                    },
+                    props: {
+                        domain: [["message_id", "=", messageId]],
+                    },
+                });
+            } catch (e) {
+                console.log("DR_POSTAL: Falling back to inline action");
+                // Fallback to inline action definition
+                await action.doAction({
+                    name: "Email Tracking",
+                    type: "ir.actions.act_window",
+                    res_model: "mail.postal.event",
+                    view_mode: "list",
+                    views: [[false, "list"]],
+                    domain: [["message_id", "=", messageId]],
+                    target: "new",
+                    context: { 
+                        create: false, 
+                        edit: false, 
+                        delete: false,
+                    },
+                });
+            }
         }, true);
         
         return {};
