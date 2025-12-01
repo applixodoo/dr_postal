@@ -13,18 +13,6 @@ export const postalPopoverState = {
 /**
  * Service to handle clicks on postal status icons in the notification popover.
  */
-let postalPopupViewIdPromise;
-async function getPostalPopupViewId(orm) {
-    if (!postalPopupViewIdPromise) {
-        postalPopupViewIdPromise = orm.call(
-            "ir.model.data",
-            "_xmlid_to_res_id",
-            ["dr_postal.mail_postal_event_view_tree_popup", false]
-        );
-    }
-    return postalPopupViewIdPromise;
-}
-
 export const postalPopoverClickService = {
     dependencies: ["action", "orm"],
     
@@ -54,47 +42,54 @@ export const postalPopoverClickService = {
                 console.log("DR_POSTAL: No message ID in state");
                 return;
             }
-            
-            let popupViewId = false;
+
             try {
-                popupViewId = await getPostalPopupViewId(orm);
-            } catch (error) {
-                console.error("DR_POSTAL: Could not resolve popup view ID", error);
-            }
-
-            const actionParams = {
-                name: "Email Tracking",
-                type: "ir.actions.act_window",
-                res_model: "mail.postal.event",
-                view_mode: "list",
-                views: [[popupViewId || false, "list"]],
-                domain: [["message_id", "=", messageId]],
-                target: "new",
-                search_view_id: false,
-                context: { 
-                    create: false, 
-                    edit: false, 
-                    delete: false,
-                    search_default_filter: false,
-                },
-            };
-
-            // Open the events popup with domain filter
-            const popupPromise = action.doAction(actionParams);
-
-            // Tag the freshly opened modal so CSS can scope styling
-            setTimeout(() => {
-                const modalBodies = document.querySelectorAll(".modal-body.o_act_window");
-                const currentModal = modalBodies[modalBodies.length - 1];
-                if (
-                    currentModal &&
-                    currentModal.querySelector('.o_list_view[data-res-model="mail.postal.event"]')
-                ) {
-                    currentModal.classList.add("o_dr_postal_popup_modal");
+                // Look up the view ID via search
+                let viewId = false;
+                try {
+                    const views = await orm.searchRead(
+                        "ir.ui.view",
+                        [["name", "=", "mail.postal.event.tree.popup"]],
+                        ["id"],
+                        { limit: 1 }
+                    );
+                    if (views.length > 0) {
+                        viewId = views[0].id;
+                        console.log("DR_POSTAL: Found popup view ID:", viewId);
+                    }
+                } catch (e) {
+                    console.warn("DR_POSTAL: Could not look up view ID", e);
                 }
-            }, 50);
 
-            await popupPromise;
+                // Build inline action with proper domain
+                const actionDef = {
+                    name: "Email Tracking",
+                    type: "ir.actions.act_window",
+                    res_model: "mail.postal.event",
+                    view_mode: "list",
+                    views: [[viewId, "list"]],
+                    domain: [["message_id", "=", messageId]],
+                    target: "new",
+                    context: {
+                        create: false,
+                        edit: false,
+                        delete: false,
+                    },
+                };
+
+                await action.doAction(actionDef);
+                
+                // Tag the freshly opened modal so CSS can scope styling
+                setTimeout(() => {
+                    const modals = document.querySelectorAll(".modal");
+                    const currentModal = modals[modals.length - 1];
+                    if (currentModal) {
+                        currentModal.classList.add("o_dr_postal_popup_modal");
+                    }
+                }, 100);
+            } catch (error) {
+                console.error("DR_POSTAL: Error opening popup", error);
+            }
         }, true);
         
         return {};

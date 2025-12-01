@@ -78,43 +78,50 @@
 
 /* 
  * Email Tracking Popup Customization
- * Hide search bar and selection checkboxes in popup
+ * Hide search bar, pager, and selection checkboxes in popup
  */
 
-/* Hide search bar in Email Tracking popup */
-/* Styling scoped to the Email Tracking popup */
-.o_dr_postal_popup_modal .o_control_panel .o_cp_searchview,
-.o_dr_postal_popup_modal .o_control_panel .o_cp_action_menus,
-.o_dr_postal_popup_modal .o_control_panel .o_cp_switch_buttons,
-.o_dr_postal_popup_modal .o_control_panel .o_cp_searchview_menu,
-.o_dr_postal_popup_modal .o_control_panel .o_searchview_quick {
+/* Hide the entire control panel in Email Tracking popup */
+.o_dr_postal_popup_modal .o_control_panel {
     display: none !important;
 }
 
-.o_dr_postal_popup_modal .o_control_panel {
-    padding: 0 0 8px 0 !important;
-    min-height: auto;
+/* Hide selection checkboxes */
+.o_dr_postal_popup_modal .o_list_record_selector,
+.o_dr_postal_popup_modal th.o_list_record_selector,
+.o_dr_postal_popup_modal td.o_list_record_selector,
+.o_dr_postal_popup_modal colgroup col:first-child {
+    display: none !important;
+    width: 0 !important;
 }
 
-.o_dr_postal_popup_modal .o_content {
-    padding-top: 0;
-}
-
+/* Make list table full width and clean */
 .o_dr_postal_popup_modal .o_list_view {
     margin: 0;
+    padding: 0;
 }
 
 .o_dr_postal_popup_modal .o_list_view table.o_list_table {
     width: 100% !important;
+    table-layout: auto !important;
 }
 
-.o_dr_postal_popup_modal .o_list_view .o_list_record_selector,
-.o_dr_postal_popup_modal .o_list_view th.o_list_record_selector,
-.o_dr_postal_popup_modal col.o_list_col_record_selector {
-    display: none !important;
+/* Clean up content area */
+.o_dr_postal_popup_modal .o_content {
+    padding: 0 !important;
 }
 
-.o_dr_postal_popup_modal .o_list_view table.o_list_table thead tr th:first-child,
-.o_dr_postal_popup_modal .o_list_view table.o_list_table tbody tr td:first-child {
-    padding-left: 12px;
+.o_dr_postal_popup_modal .modal-body {
+    padding: 0 !important;
+}
+
+/* Ensure first visible column has proper padding */
+.o_dr_postal_popup_modal .o_list_view table.o_list_table thead tr th:first-of-type:not(.o_list_record_selector),
+.o_dr_postal_popup_modal .o_list_view table.o_list_table tbody tr td:first-of-type:not(.o_list_record_selector) {
+    padding-left: 16px;
+}
+
+.o_dr_postal_popup_modal .o_list_view table.o_list_table thead tr th:last-child,
+.o_dr_postal_popup_modal .o_list_view table.o_list_table tbody tr td:last-child {
+    padding-right: 16px;
 }
