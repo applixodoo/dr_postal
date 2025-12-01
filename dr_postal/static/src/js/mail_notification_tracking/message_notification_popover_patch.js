@@ -7,9 +7,9 @@ import { registry } from "@web/core/registry";
  * Uses event delegation to catch clicks on .o_dr_postal_status elements.
  */
 export const postalPopoverClickService = {
-    dependencies: ["action"],
+    dependencies: ["action", "orm"],
     
-    start(env, { action }) {
+    async start(env, { action, orm }) {
         console.log("DR_POSTAL: Postal popover click service started");
         
         // Use event delegation to catch clicks on postal status icons
@@ -20,9 +20,9 @@ export const postalPopoverClickService = {
                 return;
             }
             
-            console.log("DR_POSTAL: Postal icon clicked in popover");
+            console.log("DR_POSTAL: Postal icon clicked");
             
-            // Find the popover container
+            // Find the popover container to confirm we're in the notification popover
             const popoverContent = postalIcon.closest(".o-mail-MessageNotificationPopover");
             if (!popoverContent) {
                 console.log("DR_POSTAL: Not in popover, ignoring");
@@ -32,42 +32,67 @@ export const postalPopoverClickService = {
             ev.preventDefault();
             ev.stopPropagation();
             
-            // Try to find the notification ID from the data
-            // The notification row structure contains the notification info
-            // We'll search by the message_id which we can get from the message component
+            // Get the message ID from the OWL component data
+            // We need to find it from the popover's parent message
+            let messageId = null;
             
-            // Find the message element that opened this popover
-            const messageEl = document.querySelector(".o-mail-Message:has(.o-mail-Message-notification)");
-            if (messageEl) {
-                const messageId = messageEl.dataset?.messageId;
-                console.log("DR_POSTAL: Found message ID:", messageId);
-                
-                if (messageId) {
-                    await action.doAction({
-                        name: "Email Tracking",
-                        type: "ir.actions.act_window",
-                        res_model: "mail.postal.event",
-                        view_mode: "list",
-                        views: [[false, "list"]],
-                        domain: [["message_id", "=", parseInt(messageId)]],
-                        target: "new",
-                        context: { create: false, edit: false, delete: false },
-                    });
-                    return;
+            // Try to find the message element that's associated with this popover
+            // The popover is typically near the message that opened it
+            const allMessages = document.querySelectorAll(".o-mail-Message[data-message-id]");
+            for (const msgEl of allMessages) {
+                const notificationSpan = msgEl.querySelector(".o-mail-Message-notification");
+                if (notificationSpan) {
+                    // This message has notifications, likely the one that opened the popover
+                    messageId = msgEl.dataset.messageId;
+                    console.log("DR_POSTAL: Found message with notifications, ID:", messageId);
+                    break;
                 }
             }
             
-            // Fallback: open all events (no filter)
-            console.log("DR_POSTAL: No message ID found, opening all events");
-            await action.doAction({
-                name: "Email Tracking",
-                type: "ir.actions.act_window",
-                res_model: "mail.postal.event",
-                view_mode: "list",
-                views: [[false, "list"]],
-                target: "new",
-                context: { create: false, edit: false, delete: false },
-            });
+            // If we couldn't find it that way, try to get from popover's owl component
+            if (!messageId) {
+                // Look for any message ID we can find
+                const nearbyMessage = document.querySelector(".o-mail-Message[data-message-id]");
+                if (nearbyMessage) {
+                    messageId = nearbyMessage.dataset.messageId;
+                }
+            }
+            
+            if (messageId) {
+                console.log("DR_POSTAL: Opening events for message ID:", messageId);
+                
+                // Get view IDs
+                const viewId = await orm.call("ir.model.data", "check_object_reference", [
+                    "dr_postal", "mail_postal_event_view_tree_popup"
+                ]).catch(() => null);
+                
+                const searchViewId = await orm.call("ir.model.data", "check_object_reference", [
+                    "dr_postal", "mail_postal_event_view_search_popup"
+                ]).catch(() => null);
+                
+                await action.doAction({
+                    name: "Email Tracking",
+                    type: "ir.actions.act_window",
+                    res_model: "mail.postal.event",
+                    view_mode: "list",
+                    views: [[viewId ? viewId[1] : false, "list"]],
+                    search_view_id: searchViewId ? [searchViewId[1], "search"] : false,
+                    domain: [["message_id", "=", parseInt(messageId)]],
+                    target: "new",
+                    context: { 
+                        create: false, 
+                        edit: false, 
+                        delete: false,
+                        search_default_group_by: false,
+                    },
+                    flags: {
+                        searchable: false,
+                        selectable: false,
+                    },
+                });
+            } else {
+                console.log("DR_POSTAL: Could not find message ID");
+            }
         }, true); // Use capture phase
         
         return {};

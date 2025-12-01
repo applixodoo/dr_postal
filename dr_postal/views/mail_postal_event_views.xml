@@ -17,16 +17,27 @@
         </field>
     </record>
 
-    <!-- Simplified Tree View for Popup -->
+    <!-- Simplified Tree View for Popup (only 3 columns) -->
     <record id="mail_postal_event_view_tree_popup" model="ir.ui.view">
         <field name="name">mail.postal.event.tree.popup</field>
         <field name="model">mail.postal.event</field>
+        <field name="priority">999</field>
         <field name="arch" type="xml">
-            <list string="Email Tracking Events" default_order="event_datetime desc" create="0" edit="0" delete="0">
-                <field name="event_datetime" string="Time"/>
+            <list string="Email Tracking" default_order="event_datetime desc" create="0" edit="0" delete="0">
+                <field name="event_datetime" string="Time" widget="datetime"/>
                 <field name="event_type" string="Event"/>
                 <field name="recipient" string="Recipient"/>
             </list>
+        </field>
+    </record>
+
+    <!-- Empty Search View for Popup (no search box) -->
+    <record id="mail_postal_event_view_search_popup" model="ir.ui.view">
+        <field name="name">mail.postal.event.search.popup</field>
+        <field name="model">mail.postal.event</field>
+        <field name="priority">999</field>
+        <field name="arch" type="xml">
+            <search string="Email Tracking"/>
         </field>
     </record>
 
