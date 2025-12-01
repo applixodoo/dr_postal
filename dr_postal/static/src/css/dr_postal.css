@@ -82,19 +82,39 @@
  */
 
 /* Hide search bar in Email Tracking popup */
-.modal .o_list_view .o_control_panel .o_searchview,
-.modal .o_list_view .o_control_panel .o_search_options,
-.modal .o_list_view .o_control_panel .o_searchview_input_container {
+/* Styling scoped to the Email Tracking popup */
+.o_dr_postal_popup_modal .o_control_panel .o_cp_searchview,
+.o_dr_postal_popup_modal .o_control_panel .o_cp_action_menus,
+.o_dr_postal_popup_modal .o_control_panel .o_cp_switch_buttons,
+.o_dr_postal_popup_modal .o_control_panel .o_cp_searchview_menu,
+.o_dr_postal_popup_modal .o_control_panel .o_searchview_quick {
     display: none !important;
 }
 
-/* Hide selection checkboxes in Email Tracking popup */
-.modal .o_list_view .o_list_record_selector,
-.modal .o_list_view thead .o_list_record_selector {
+.o_dr_postal_popup_modal .o_control_panel {
+    padding: 0 0 8px 0 !important;
+    min-height: auto;
+}
+
+.o_dr_postal_popup_modal .o_content {
+    padding-top: 0;
+}
+
+.o_dr_postal_popup_modal .o_list_view {
+    margin: 0;
+}
+
+.o_dr_postal_popup_modal .o_list_view table.o_list_table {
+    width: 100% !important;
+}
+
+.o_dr_postal_popup_modal .o_list_view .o_list_record_selector,
+.o_dr_postal_popup_modal .o_list_view th.o_list_record_selector,
+.o_dr_postal_popup_modal col.o_list_col_record_selector {
     display: none !important;
 }
 
-/* Also hide the search panel toggle */
-.modal .o_list_view .o_searchview_quick {
-    display: none !important;
+.o_dr_postal_popup_modal .o_list_view table.o_list_table thead tr th:first-child,
+.o_dr_postal_popup_modal .o_list_view table.o_list_table tbody tr td:first-child {
+    padding-left: 12px;
 }

@@ -43,8 +43,7 @@ export const postalPopoverClickService = {
                 return;
             }
             
-            // Open the events popup with domain filter
-            await action.doAction({
+            const actionParams = {
                 name: "Email Tracking",
                 type: "ir.actions.act_window",
                 res_model: "mail.postal.event",
@@ -59,7 +58,21 @@ export const postalPopoverClickService = {
                     delete: false,
                     search_default_filter: false,
                 },
-            });
+            };
+
+            // Open the events popup with domain filter
+            const popupPromise = action.doAction(actionParams);
+
+            // Tag the freshly opened modal so CSS can scope styling
+            setTimeout(() => {
+                const modals = document.querySelectorAll(".modal.o_act_window");
+                const modal = modals[modals.length - 1];
+                if (modal) {
+                    modal.classList.add("o_dr_postal_popup_modal");
+                }
+            }, 50);
+
+            await popupPromise;
         }, true);
         
         return {};
