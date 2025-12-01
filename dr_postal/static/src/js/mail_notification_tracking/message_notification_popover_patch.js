@@ -13,10 +13,22 @@ export const postalPopoverState = {
 /**
  * Service to handle clicks on postal status icons in the notification popover.
  */
+let postalPopupViewIdPromise;
+async function getPostalPopupViewId(orm) {
+    if (!postalPopupViewIdPromise) {
+        postalPopupViewIdPromise = orm.call(
+            "ir.model.data",
+            "_xmlid_to_res_id",
+            ["dr_postal.mail_postal_event_view_tree_popup", false]
+        );
+    }
+    return postalPopupViewIdPromise;
+}
+
 export const postalPopoverClickService = {
-    dependencies: ["action"],
+    dependencies: ["action", "orm"],
     
-    start(env, { action }) {
+    start(env, { action, orm }) {
         console.log("DR_POSTAL: Postal popover click service started");
         
         // Global click handler for postal icons in popover
@@ -43,12 +55,19 @@ export const postalPopoverClickService = {
                 return;
             }
             
+            let popupViewId = false;
+            try {
+                popupViewId = await getPostalPopupViewId(orm);
+            } catch (error) {
+                console.error("DR_POSTAL: Could not resolve popup view ID", error);
+            }
+
             const actionParams = {
                 name: "Email Tracking",
                 type: "ir.actions.act_window",
                 res_model: "mail.postal.event",
                 view_mode: "list",
-                views: [[false, "list"]],
+                views: [[popupViewId || false, "list"]],
                 domain: [["message_id", "=", messageId]],
                 target: "new",
                 search_view_id: false,
