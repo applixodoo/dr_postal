@@ -52,15 +52,12 @@ export const postalPopoverClickService = {
                 views: [[false, "list"]],
                 domain: [["message_id", "=", messageId]],
                 target: "new",
+                search_view_id: false,
                 context: { 
                     create: false, 
                     edit: false, 
                     delete: false,
-                },
-                flags: {
-                    withSearchBar: false,
-                    searchMenuTypes: [],
-                    hasSelectors: false,
+                    search_default_filter: false,
                 },
             });
         }, true);

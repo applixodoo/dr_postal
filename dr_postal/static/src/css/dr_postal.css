@@ -75,3 +75,26 @@
 .o-mail-MessageNotificationPopover .o_dr_postal_status {
     display: inline-block !important;
 }
+
+/* 
+ * Email Tracking Popup Customization
+ * Hide search bar and selection checkboxes in popup
+ */
+
+/* Hide search bar in Email Tracking popup */
+.modal .o_list_view .o_control_panel .o_searchview,
+.modal .o_list_view .o_control_panel .o_search_options,
+.modal .o_list_view .o_control_panel .o_searchview_input_container {
+    display: none !important;
+}
+
+/* Hide selection checkboxes in Email Tracking popup */
+.modal .o_list_view .o_list_record_selector,
+.modal .o_list_view thead .o_list_record_selector {
+    display: none !important;
+}
+
+/* Also hide the search panel toggle */
+.modal .o_list_view .o_searchview_quick {
+    display: none !important;
+}
