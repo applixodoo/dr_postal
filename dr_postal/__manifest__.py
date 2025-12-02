@@ -34,6 +34,7 @@ Configuration
     'data': [
         'security/ir.model.access.csv',
         'wizard/mail_resend_message_views.xml',
+        'wizard/mail_postal_events_popup_views.xml',
         'views/res_config_settings_views.xml',
         'views/mail_postal_event_views.xml',
     ],

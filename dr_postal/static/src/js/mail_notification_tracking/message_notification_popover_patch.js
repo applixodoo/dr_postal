@@ -12,11 +12,12 @@ export const postalPopoverState = {
 
 /**
  * Service to handle clicks on postal status icons in the notification popover.
+ * Opens a clean wizard popup (like the resend dialog) instead of a list view.
  */
 export const postalPopoverClickService = {
-    dependencies: ["action", "orm"],
+    dependencies: ["action"],
     
-    start(env, { action, orm }) {
+    start(env, { action }) {
         console.log("DR_POSTAL: Postal popover click service started");
         
         // Global click handler for postal icons in popover
@@ -44,49 +45,12 @@ export const postalPopoverClickService = {
             }
 
             try {
-                // Look up the view ID via search
-                let viewId = false;
-                try {
-                    const views = await orm.searchRead(
-                        "ir.ui.view",
-                        [["name", "=", "mail.postal.event.tree.popup"]],
-                        ["id"],
-                        { limit: 1 }
-                    );
-                    if (views.length > 0) {
-                        viewId = views[0].id;
-                        console.log("DR_POSTAL: Found popup view ID:", viewId);
-                    }
-                } catch (e) {
-                    console.warn("DR_POSTAL: Could not look up view ID", e);
-                }
-
-                // Build inline action with proper domain
-                const actionDef = {
-                    name: "Email Tracking",
-                    type: "ir.actions.act_window",
-                    res_model: "mail.postal.event",
-                    view_mode: "list",
-                    views: [[viewId, "list"]],
-                    domain: [["message_id", "=", messageId]],
-                    target: "new",
-                    context: {
-                        create: false,
-                        edit: false,
-                        delete: false,
+                // Call the wizard action by XMLID, passing message ID via context
+                await action.doAction("dr_postal.mail_postal_events_popup_action", {
+                    additionalContext: {
+                        default_mail_message_id: messageId,
                     },
-                };
-
-                await action.doAction(actionDef);
-                
-                // Tag the freshly opened modal so CSS can scope styling
-                setTimeout(() => {
-                    const modals = document.querySelectorAll(".modal");
-                    const currentModal = modals[modals.length - 1];
-                    if (currentModal) {
-                        currentModal.classList.add("o_dr_postal_popup_modal");
-                    }
-                }, 100);
+                });
             } catch (error) {
                 console.error("DR_POSTAL: Error opening popup", error);
             }
